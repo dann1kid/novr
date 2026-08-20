@@ -91,8 +91,14 @@ public class VrUiCursor: NOVRBehaviour
         if (_cursor != null && camera != null)
         {
             Vector3 viewportPoint = camera.WorldToViewportPoint(_cursor.transform.position, Camera.MonoOrStereoscopicEye.Mono);
-            float screenX = Mathf.Clamp(viewportPoint.x * Screen.width, 0f, Screen.width);
-            float screenY = Mathf.Clamp(viewportPoint.y * Screen.height, 0f, Screen.height);
+            var pixelRect = camera.pixelRect;
+            if (pixelRect.width <= 1f || pixelRect.height <= 1f)
+            {
+                pixelRect = new Rect(0f, 0f, Screen.width, Screen.height);
+            }
+
+            var screenX = pixelRect.x + Mathf.Clamp01(viewportPoint.x) * pixelRect.width;
+            var screenY = pixelRect.y + Mathf.Clamp01(viewportPoint.y) * pixelRect.height;
             return new Vector2(screenX, screenY);
         }
         return Vector2.zero;
@@ -291,25 +297,41 @@ public class VrUiCursor: NOVRBehaviour
 
         var camera = UiCamera;
         Vector3 cameraPos = camera != null ? camera.transform.position : Vector3.zero;
+        RaycastResult? bestInteractive = null;
+        RaycastResult? bestAny = null;
 
         foreach (var result in results)
         {
-            if (result.gameObject == _cursor || 
+            if (result.gameObject == _cursor ||
                 result.distance < 0f ||
                 result.gameObject.GetComponentInParent<global::MapIcon>() != null)
             {
                 continue;
             }
 
-            overInteractive = IsInteractiveRaycastTarget(result.gameObject);
-            distance = result.worldPosition == Vector3.zero
-                ? result.distance
-                : Vector3.Distance(cameraPos, result.worldPosition);
+            if (bestAny == null)
+            {
+                bestAny = result;
+            }
 
-            return distance > 0f;
+            if (bestInteractive == null && IsInteractiveRaycastTarget(result.gameObject))
+            {
+                bestInteractive = result;
+            }
         }
 
-        return false;
+        var chosen = bestInteractive ?? bestAny;
+        if (chosen == null)
+        {
+            return false;
+        }
+
+        overInteractive = IsInteractiveRaycastTarget(chosen.Value.gameObject);
+        distance = chosen.Value.worldPosition == Vector3.zero
+            ? chosen.Value.distance
+            : Vector3.Distance(cameraPos, chosen.Value.worldPosition);
+
+        return distance > 0f;
     }
 
     private static bool IsInteractiveRaycastTarget(GameObject gameObject)

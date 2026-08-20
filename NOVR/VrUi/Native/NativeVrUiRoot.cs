@@ -36,6 +36,7 @@ public class NativeVrUiRoot : NOVRBehaviour
     private NativeSettingsPanel? _settingsPanel;
     private NativeWorkshopPanel? _workshopPanel;
     private NativeVrUiSettingsPanel? _vrUiSettingsPanel;
+    private NativeCustomizeMissionPanel? _customizeMissionPanel;
     private GameObject? _recenterWidgetRoot;
     private Canvas? _recenterWidgetCanvas;
     private Button? _recenterWidgetButton;
@@ -158,7 +159,16 @@ public class NativeVrUiRoot : NOVRBehaviour
         _workshopPanel?.SetVisible(shouldShowWorkshop);
         _vrUiSettingsPanel?.SetVisible(shouldShowVrUiSettings);
 
-        var shouldShowNativeUi = shouldShowMainMenu || shouldShowSinglePlayerMissionPicker || shouldShowMultiplayer || shouldShowSettings || shouldShowWorkshop || shouldShowVrUiSettings;
+        if (_customizeMissionPanel != null &&
+            _customizeMissionPanel.IsVisible &&
+            !shouldShowSinglePlayerMissionPicker &&
+            !shouldShowMultiplayer)
+        {
+            _customizeMissionPanel.Hide();
+        }
+
+        var shouldShowNativeUi = shouldShowMainMenu || shouldShowSinglePlayerMissionPicker || shouldShowMultiplayer || shouldShowSettings || shouldShowWorkshop || shouldShowVrUiSettings ||
+                                 (_customizeMissionPanel != null && _customizeMissionPanel.IsVisible);
         HandleRecenterShortcut(shouldShowNativeUi);
         UpdatePlacement(shouldShowNativeUi);
         UpdatePendingRecenter(shouldShowNativeUi);
@@ -231,6 +241,8 @@ public class NativeVrUiRoot : NOVRBehaviour
         _vrUiSettingsPanel = _root.AddComponent<NativeVrUiSettingsPanel>();
         _vrUiSettingsPanel.Initialize(rectTransform, CloseVrUiSettingsPanel, RecenterMenu);
         _vrUiSettingsPanel.SetVisible(false);
+        _customizeMissionPanel = _root.AddComponent<NativeCustomizeMissionPanel>();
+        _customizeMissionPanel.Initialize(rectTransform);
         CreateRecenterWidget();
         _actions.ActionInvoked += OnNativeActionInvoked;
         _root.SetActive(false);

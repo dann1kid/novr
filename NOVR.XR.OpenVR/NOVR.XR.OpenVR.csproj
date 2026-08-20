@@ -23,7 +23,7 @@
         </Reference>
     </ItemGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(RestoreBepInExFromNuget)' == 'true'">
         <PackageReference Include="BepInEx.Core" Version="5.4.16" />
     </ItemGroup>
 

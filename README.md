@@ -7,7 +7,7 @@ NOVR is a reworked version of [UUVR](https://github.com/Raicuparta/uuvr) designe
 ### Recommended: GUI installer
 
 1. Close Nuclear Option before installing or updating the mod.
-2. Download the latest installer from the [NOVR releases page](https://github.com/InfernoSuperNova/novr/releases/latest):
+2. Download the latest installer from the [NOVR releases page](https://github.com/dann1kid/novr/releases/latest):
     - **Windows:** `NOVR.Installer-Win.exe`
     - **Linux/Proton:** `NOVR.Installer-Linux`
 3. Run the installer.
@@ -41,7 +41,7 @@ Use this only if the installer does not work for your setup.
 1. Close Nuclear Option.
 2. Install [BepInEx 5.x](https://github.com/BepInEx/BepInEx/releases/latest) into the Nuclear Option game folder.
     - After installing BepInEx, this folder should exist: `Nuclear Option/BepInEx/core`.
-3. Download `NOVR.zip` from the [latest NOVR release](https://github.com/InfernoSuperNova/novr/releases/latest).
+3. Download `NOVR.zip` from the [latest NOVR release](https://github.com/dann1kid/novr/releases/latest).
 4. Extract the contents of `NOVR.zip` into `Nuclear Option/BepInEx`.
 5. Confirm these files exist:
 

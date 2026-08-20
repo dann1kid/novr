@@ -66,13 +66,24 @@ internal static class HUDBombingStateViewPositionPatch
         alignmentBar.transform.rotation = VrHudProjection.GetRotationAlongHudSegment(upperHudPosition, lowerHudPosition, cockpitHudCamera);
 
         if (ccrpCircle != null)
+        {
+            ccrpCircle.transform.position = alignmentBar.transform.position;
             ccrpCircle.transform.rotation = cockpitHudCamera.transform.rotation;
+        }
 
         if (dropCountdown != null)
+        {
+            dropCountdown.transform.position = alignmentBar.transform.position
+                + cockpitHudCamera.transform.right * VrHudProjection.ReferencePixelsToHudDistance(30.0f);
             dropCountdown.transform.rotation = cockpitHudCamera.transform.rotation;
+        }
 
         if (ccrpFallTime != null)
+        {
+            ccrpFallTime.transform.position = alignmentBar.transform.position
+                - cockpitHudCamera.transform.up * VrHudProjection.ReferencePixelsToHudDistance(24.0f);
             ccrpFallTime.transform.rotation = cockpitHudCamera.transform.rotation;
+        }
     }
 
     private static void UpdateCcipDisplay(global::HUDBombingState state)
@@ -118,7 +129,11 @@ internal static class HUDBombingStateViewPositionPatch
         VrHudProjection.SetVerticalLine(ccipLine.transform, lineStart, lineEnd, cockpitHudCamera);
 
         if (ccipFallTime != null)
+        {
+            ccipFallTime.transform.position = pipperHudPosition
+                + cockpitHudCamera.transform.up * VrHudProjection.ReferencePixelsToHudDistance(22.0f);
             ccipFallTime.transform.rotation = cockpitHudCamera.transform.rotation;
+        }
     }
 
 }

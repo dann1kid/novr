@@ -22,6 +22,8 @@
     <NuclearOptionPluginDir Condition="'$(NuclearOptionPluginDir)' == '' And '$(NuclearOptionGameDirResolved)' != 'NUCLEAR_OPTION_NOT_FOUND'">$(NuclearOptionGameDirResolved)/BepInEx/plugins/NOVR</NuclearOptionPluginDir>
     <NuclearOptionPatcherDir Condition="'$(NuclearOptionPatcherDir)' == '' And '$(NuclearOptionGameDirResolved)' != 'NUCLEAR_OPTION_NOT_FOUND'">$(NuclearOptionGameDirResolved)/BepInEx/patchers/NOVR</NuclearOptionPatcherDir>
     <NuclearOptionLocalReferenceExcludes>$(NuclearOptionManagedDir)/Unity.XR.Management.dll;$(NuclearOptionManagedDir)/Unity.XR.OpenXR.dll;$(NuclearOptionManagedDir)/Unity.XR.OpenVR.dll</NuclearOptionLocalReferenceExcludes>
+    <RestoreBepInExFromNuget Condition="'$(RestoreBepInExFromNuget)' == '' And Exists('$(NuclearOptionBepInExCoreDir)/BepInEx.dll')">false</RestoreBepInExFromNuget>
+    <RestoreBepInExFromNuget Condition="'$(RestoreBepInExFromNuget)' == ''">true</RestoreBepInExFromNuget>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(NuclearOptionGameDirResolved)' != 'NUCLEAR_OPTION_NOT_FOUND' And '$(SkipNuclearOptionReferences)' != 'true'">

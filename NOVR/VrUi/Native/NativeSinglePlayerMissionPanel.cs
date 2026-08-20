@@ -44,6 +44,8 @@ public class NativeSinglePlayerMissionPanel : MonoBehaviour
     private MissionGroupFilter _activeGroupFilter = MissionGroupFilter.All;
     private int _activeTagFilterIndex;
     private bool _loaded;
+    private Mission? _customizedMission;
+    private string? _customizedMissionName;
 
     public void Initialize(NativeGameActionAdapter actions, RectTransform root)
     {
@@ -270,6 +272,11 @@ public class NativeSinglePlayerMissionPanel : MonoBehaviour
 
         _selectedIndex = index;
         var mission = _filteredMissions[_selectedIndex];
+        if (!string.Equals(_customizedMissionName, mission.Key.Name, System.StringComparison.Ordinal))
+        {
+            _customizedMission = null;
+            _customizedMissionName = null;
+        }
         if (_titleText != null) _titleText.text = mission.Key.Name;
         if (_tagsText != null) _tagsText.text = string.Join("   ", mission.Mission.missionSettings.Tags.Select(tag => tag.Tag));
         if (_descriptionText != null) _descriptionText.text = mission.Mission.missionSettings.description ?? "";
@@ -331,8 +338,30 @@ public class NativeSinglePlayerMissionPanel : MonoBehaviour
     {
         if (_selectedIndex < 0 || _selectedIndex >= _filteredMissions.Count) return;
 
-        _actions?.TrySelectOriginalMission(_filteredMissions[_selectedIndex].Key);
-        _actions?.TryInvokeCurrentMenuButton("Customize Mission", "Customize Mission", "CUSTOMIZE MISSION");
+        var missionKey = _filteredMissions[_selectedIndex].Key;
+        if (!missionKey.TryLoad(out var mission, out var error))
+        {
+            if (_descriptionText != null) _descriptionText.text = error;
+            Debug.LogWarning($"[NOVR] Native customize failed to load mission '{missionKey}': {error}");
+            return;
+        }
+
+        var customize = GetComponent<NativeCustomizeMissionPanel>();
+        if (customize == null)
+        {
+            Debug.LogError("[NOVR] Native customize panel is missing.");
+            return;
+        }
+
+        customize.Show(mission, applied =>
+        {
+            _customizedMission = applied;
+            _customizedMissionName = missionKey.Name;
+            if (_descriptionText != null)
+            {
+                _descriptionText.text = (applied.missionSettings.description ?? "") + "\n\nCustomized for this launch.";
+            }
+        });
     }
 
     private void StartSelectedMission()
@@ -340,7 +369,13 @@ public class NativeSinglePlayerMissionPanel : MonoBehaviour
         if (_selectedIndex < 0 || _selectedIndex >= _filteredMissions.Count) return;
 
         var missionKey = _filteredMissions[_selectedIndex].Key;
-        if (!missionKey.TryLoad(out var mission, out var error))
+        Mission mission;
+        if (_customizedMission != null &&
+            string.Equals(_customizedMissionName, missionKey.Name, System.StringComparison.Ordinal))
+        {
+            mission = _customizedMission;
+        }
+        else if (!missionKey.TryLoad(out mission, out var error))
         {
             if (_descriptionText != null) _descriptionText.text = error;
             Debug.LogWarning($"[NOVR] Native single player failed to load mission '{missionKey}': {error}");

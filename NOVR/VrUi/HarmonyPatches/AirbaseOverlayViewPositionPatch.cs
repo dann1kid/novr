@@ -17,6 +17,8 @@ internal static class AirbaseOverlayViewPositionPatch
     private static readonly FieldInfo RunwayBordersField = AccessTools.Field(typeof(global::AirbaseOverlay), "runwayBorders");
     private static readonly FieldInfo GlideslopeField = AccessTools.Field(typeof(global::AirbaseOverlay), "glideslope");
     private static readonly FieldInfo GlideslopeAimPointField = AccessTools.Field(typeof(global::AirbaseOverlay), "glideslopeAimPoint");
+    private static readonly MethodInfo? GetGlideslopeAimpointMethod =
+        AccessTools.Method(typeof(Airbase.Runway), "GetGlideslopeAimpoint");
 
     [HarmonyPatch(typeof(global::AirbaseOverlay), "LateUpdate")]
     private static class LateUpdatePatch
@@ -138,11 +140,16 @@ internal static class AirbaseOverlayViewPositionPatch
         var runwayVelocity = runwayUsage.Value.Runway.GetVelocity();
         var closingSpeed = Vector3.Dot(aircraft.rb.velocity - runwayVelocity, (runwayEndPosition - aircraft.transform.position).normalized);
         var timeToRunwayEnd = distanceToRunwayEnd / closingSpeed;
-        var aimPointWorldPosition = runwayUsage.Value.Runway.GetGlideslopeAimpoint(
-            aircraft,
-            distanceToRunwayEnd * 0.9f,
-            runwayUsage.Value.Reverse,
-            timeToRunwayEnd * 0.9f);
+        if (!TryGetGlideslopeAimpoint(
+                runwayUsage.Value.Runway,
+                aircraft,
+                distanceToRunwayEnd * 0.9f,
+                runwayUsage.Value.Reverse,
+                timeToRunwayEnd * 0.9f,
+                out var aimPointWorldPosition))
+        {
+            return;
+        }
 
         if (!VrHudProjection.TryProjectToCockpitHud(runwayEndPosition, out var runwayEndHudPosition) ||
             !VrHudProjection.TryProjectToCockpitHud(aimPointWorldPosition, out var aimPointHudPosition))
@@ -155,6 +162,37 @@ internal static class AirbaseOverlayViewPositionPatch
         VrHudProjection.SetVerticalLine(glideslope.transform, runwayEndHudPosition, aimPointHudPosition, cockpitHudCamera, -8.0f);
         glideslopeAimPoint.transform.position = aimPointHudPosition;
         glideslopeAimPoint.transform.rotation = cockpitHudCamera.transform.rotation;
+    }
+
+    private static bool TryGetGlideslopeAimpoint(
+        Airbase.Runway runway,
+        Aircraft aircraft,
+        float distance,
+        bool reverse,
+        float time,
+        out Vector3 aimPoint)
+    {
+        aimPoint = default;
+        if (GetGlideslopeAimpointMethod == null || runway == null)
+        {
+            return false;
+        }
+
+        try
+        {
+            var result = GetGlideslopeAimpointMethod.Invoke(runway, new object[] { aircraft, distance, reverse, time });
+            if (result is Vector3 vector)
+            {
+                aimPoint = vector;
+                return true;
+            }
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"[NOVR] GetGlideslopeAimpoint failed: {exception.Message}");
+        }
+
+        return false;
     }
 
     private static Airbase.Runway.RunwayUsage? GetRunwayUsage(global::AirbaseOverlay overlay) =>

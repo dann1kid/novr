@@ -1,6 +1,6 @@
-using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.XR;
 
 namespace NOVR;
 
@@ -8,10 +8,25 @@ namespace NOVR;
 public static class CameraPatches
 {
     [HarmonyPrefix]
-    // Unity already prevents this, but it also nags you constantly about it.
-    // Some games try to change the FOV every frame, and all those logs can reduce performance.
-    private static bool PreventChangingFov()
+    // XR/HMD cameras reject FOV writes and spam the log. The previous blanket skip made
+    // every Camera.fieldOfView setter a no-op, including TargetCam and HUD overlay cameras.
+    private static bool PreventChangingFov(Camera __instance)
     {
-        return false;
+        if (__instance == null)
+        {
+            return false;
+        }
+
+        if (__instance.stereoEnabled)
+        {
+            return false;
+        }
+
+        if (XRSettings.isDeviceActive && __instance.stereoTargetEye != StereoTargetEyeMask.None)
+        {
+            return false;
+        }
+
+        return true;
     }
 }

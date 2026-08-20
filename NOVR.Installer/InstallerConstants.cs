@@ -3,7 +3,7 @@ namespace NOVR.Installer;
 public static class InstallerConstants
 {
     public const string AppName = "Nuclear Option VR";
-    public const string GitHubOwner = "InfernoSuperNova";
+    public const string GitHubOwner = "dann1kid";
     public const string GitHubRepo = "novr";
     public const string UserAgent = "NOVR.Installer";
 

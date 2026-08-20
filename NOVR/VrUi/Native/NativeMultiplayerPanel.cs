@@ -98,6 +98,8 @@ public class NativeMultiplayerPanel : MonoBehaviour
     private bool _hostPasswordEnabled;
     private bool _hostMissionsLoaded;
     private bool _isHosting;
+    private Mission? _customizedHostMission;
+    private string? _customizedHostMissionName;
     private NativeLobbyEntry? _pendingPasswordLobby;
     private float _nextSourceRefreshTime;
     private bool _wasVisible;
@@ -321,6 +323,7 @@ public class NativeMultiplayerPanel : MonoBehaviour
         _hostStatusText = CreateText("Host Status", settingsPanel, "", new Vector2(0f, -200f), new Vector2(700f, 90f), 13, TextAnchor.MiddleCenter, new Color(0.84f, 0.90f, 0.92f, 1f));
 
         CreateMenuButton("CANCEL", _hostPanel, new Vector2(-500f, -420f), new Vector2(180f, 42f), BackButtonColor, HideHostSetup, 15);
+        CreateMenuButton("CUSTOMIZE MISSION", _hostPanel, new Vector2(0f, -420f), new Vector2(260f, 42f), ButtonColor, CustomizeHostMission, 14);
         CreateMenuButton("HOST LOBBY", _hostPanel, new Vector2(500f, -420f), new Vector2(220f, 42f), JoinButtonColor, HostLobbyClicked, 15);
         _hostPanel.gameObject.SetActive(false);
     }
@@ -804,6 +807,11 @@ public class NativeMultiplayerPanel : MonoBehaviour
 
         _hostSelectedMissionIndex = index;
         var mission = _hostMissions[index];
+        if (!string.Equals(_customizedHostMissionName, mission.Key.Name, StringComparison.Ordinal))
+        {
+            _customizedHostMission = null;
+            _customizedHostMissionName = null;
+        }
         if (_hostMissionTitleText != null) _hostMissionTitleText.text = mission.Key.Name;
         if (_hostMissionDescriptionText != null) _hostMissionDescriptionText.text = mission.Mission.missionSettings.description ?? "";
         if (_hostNameInput != null && string.IsNullOrWhiteSpace(_hostNameInput.text))
@@ -833,6 +841,41 @@ public class NativeMultiplayerPanel : MonoBehaviour
     private int GetLastHostMissionPage()
     {
         return Mathf.Max(0, Mathf.CeilToInt(_hostMissions.Count / (float)HostMissionPageSize) - 1);
+    }
+
+    private void CustomizeHostMission()
+    {
+        if (_hostSelectedMissionIndex < 0 || _hostSelectedMissionIndex >= _hostMissions.Count)
+        {
+            SetHostStatus("Select a multiplayer mission first.");
+            return;
+        }
+
+        var entry = _hostMissions[_hostSelectedMissionIndex];
+        if (!entry.Key.TryLoad(out var mission, out var error))
+        {
+            SetHostStatus(error);
+            Debug.LogWarning($"[NOVR] Native customize failed to load host mission '{entry.Key}': {error}");
+            return;
+        }
+
+        var customize = GetComponent<NativeCustomizeMissionPanel>();
+        if (customize == null)
+        {
+            SetHostStatus("Customize panel is missing.");
+            return;
+        }
+
+        customize.Show(mission, applied =>
+        {
+            _customizedHostMission = applied;
+            _customizedHostMissionName = entry.Key.Name;
+            SetHostStatus("Mission customized for this lobby.");
+            if (_hostMissionDescriptionText != null)
+            {
+                _hostMissionDescriptionText.text = (applied.missionSettings.description ?? "") + "\n\nCustomized for this lobby.";
+            }
+        });
     }
 
     private void ChangeHostMaxPlayers(int delta)
@@ -905,7 +948,13 @@ public class NativeMultiplayerPanel : MonoBehaviour
 
         try
         {
-            if (!entry.Key.TryLoad(out var mission, out var error))
+            Mission mission;
+            if (_customizedHostMission != null &&
+                string.Equals(_customizedHostMissionName, entry.Key.Name, StringComparison.Ordinal))
+            {
+                mission = _customizedHostMission;
+            }
+            else if (!entry.Key.TryLoad(out mission, out var error))
             {
                 SetHostStatus(error);
                 Debug.LogWarning($"[NOVR] Native multiplayer failed to load host mission '{entry.Key}': {error}");
