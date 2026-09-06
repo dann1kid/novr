@@ -17,7 +17,7 @@ namespace NOVR;
 [BepInPlugin(
     "deltawing.novr",
     "NOVR",
-    "0.4.7")]
+    "0.4.8")]
 public class NOVRPlugin : BaseUnityPlugin
 {
     
@@ -43,7 +43,8 @@ public class NOVRPlugin : BaseUnityPlugin
             new ModConfiguration(Config);
             var harmony = HarmonyPatchApplier.Apply(Assembly.GetExecutingAssembly());
             CameraCockpitStatePatch.TryApply(harmony);
-            XRPassZoomPatch.TryApply(harmony);
+            // XRPassZoomPatch is disabled: HarmonyX postfix on XRPass.GetProjMatrix can
+            // replace the OpenXR projection with a zero matrix and produce a black HMD.
         }
         catch (Exception ex)
         {

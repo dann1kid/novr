@@ -282,7 +282,14 @@ public class Patcher
         foreach (var file in dir.GetFiles())
         {
             var targetFilePath = Path.Combine(destinationDir, file.Name);
-            file.CopyTo(targetFilePath, true);
+            try
+            {
+                file.CopyTo(targetFilePath, true);
+            }
+            catch (IOException exception)
+            {
+                Console.WriteLine($"[NOVR.Patcher] Skipping locked file '{targetFilePath}': {exception.Message}");
+            }
         }
 
         foreach (var subDir in dirs)

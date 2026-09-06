@@ -81,7 +81,10 @@ public class NOUIManager : NOVRBehaviour
         VrCameraManager.IgnoredCameras.Add(camera);
         
 
-        camera.stereoTargetEye = StereoTargetEyeMask.Both;
+        // Must not submit its own XR view. A second stereo camera at depth 100 renders only
+        // the empty VR UI layer and replaces the game view with black in the headset.
+        camera.stereoTargetEye = StereoTargetEyeMask.None;
+        additionalCameraData.allowXRRendering = false;
         camera.targetTexture = null;
         camera.clearFlags = CameraClearFlags.Depth;
         camera.backgroundColor = Color.clear;

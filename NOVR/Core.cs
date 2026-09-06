@@ -93,7 +93,6 @@ public class Core : MonoBehaviour
         if (_aircraft != _oldAircraft)
         {
             NOVRHeadsetData.CalibrateTranslation();
-            NOVRHeadsetData.CalibrateRotation();
         }
         CameraStateManager.enableMouseLook = false;
     }

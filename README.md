@@ -4,6 +4,10 @@ NOVR is a reworked version of [UUVR](https://github.com/Raicuparta/uuvr) designe
 
 This tree is based on the [dann1kid/novr](https://github.com/dann1kid/novr) fork of [InfernoSuperNova/novr](https://github.com/InfernoSuperNova/novr), then patched for remaining VR gaps.
 
+## 0.4.8
+
+- **Black headset fix:** disable the XRPass zoom hook that could zero the projection matrix, and stop the VR UI camera from submitting its own empty stereo view.
+
 ## 0.4.7
 
 - **VR entry restored:** a failed Harmony patch or a not-yet-ready headset no longer prevents OpenXR from starting. Yaw is not recentered when tracking is first acquired.

@@ -1,6 +1,5 @@
 using HarmonyLib;
 using UnityEngine;
-using UnityEngine.XR;
 
 namespace NOVR;
 
@@ -8,25 +7,10 @@ namespace NOVR;
 public static class CameraPatches
 {
     [HarmonyPrefix]
-    // XR/HMD cameras reject FOV writes and spam the log. The previous blanket skip made
-    // every Camera.fieldOfView setter a no-op, including TargetCam and HUD overlay cameras.
-    private static bool PreventChangingFov(Camera __instance)
+    // Unity XR rejects FOV writes on HMD cameras and nags every frame. 0.4.3 blocked every
+    // setter; the 0.4.5 selective skip coincided with a black headset view.
+    private static bool PreventChangingFov()
     {
-        if (__instance == null)
-        {
-            return false;
-        }
-
-        if (__instance.stereoEnabled)
-        {
-            return false;
-        }
-
-        if (XRSettings.isDeviceActive && __instance.stereoTargetEye != StereoTargetEyeMask.None)
-        {
-            return false;
-        }
-
-        return true;
+        return false;
     }
 }

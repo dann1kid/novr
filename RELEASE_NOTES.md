@@ -1,20 +1,20 @@
-## 0.4.7
+# NOVR 0.4.8
 
-Close the game, then extract `NOVR-0.4.7.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.7`.
+Close the game, then extract `NOVR-0.4.8.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.8`.
 
-## VR entry fix
+## Black headset fix
 
-0.4.6 could fail to start OpenXR: one missing Harmony target aborted the whole plugin before VR toggled on, and a failed OpenXR init threw instead of retrying. 0.4.7 skips bad patches, retries OpenXR if the headset was asleep, and no longer recenters yaw when tracking is first acquired.
+0.4.7 reached OpenXR but could show a black HMD: a HarmonyX postfix on URP `XRPass.GetProjMatrix` could replace the projection with a zero matrix, and the VR UI camera could submit its own empty stereo view. 0.4.8 disables that zoom hook, stops the UI camera from rendering to the headset, and restores the 0.4.3 FOV guard. Stereoscopic Zoom View is temporarily off; HUD layout from 0.4.6 is unchanged.
+
+The patcher also continues if `Unity.XR.Management.dll` is locked by another process instead of aborting the rest of CopyToGame.
+
+## Also in 0.4.7
+
+A failed Harmony patch or a not-yet-ready headset no longer prevents OpenXR from starting.
 
 ## HUD (from 0.4.6)
 
 - Tighter HUD: the pitch/climb ladder is a narrow view-cone scale instead of a wide wraparound ring. Weapon and status plates sit closer to the boresight.
 - HMD/radar contacts use a smaller off-boresight ring so markers stay in central vision. The HMD tape is attached to the headset, not world origin.
-- Cockpit recenter uses seated yaw, runs when you spawn, and Home / VR CENTER work in the cockpit. Look forward during the countdown.
+- Cockpit recenter uses seated yaw via Home / VR CENTER. Look forward during the countdown.
 - Proximity gradient: nearer contacts and waypoints are larger, closer, and brighter; distant ones recede.
-
-## Also in 0.4.5
-
-- Stereoscopic VR zoom on Zoom View
-- Menus and HUD plates face the headset
-- VR CENTER recenters tracking and the native menu plane
