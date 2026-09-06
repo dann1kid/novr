@@ -17,6 +17,7 @@ public class NOVRGameplayUIBehaviour : UIRenderedCanvasBehavior
         var canvas = GetComponent<Canvas>();
         if (canvas != null && !canvas.enabled)
         {
+            transform.position = new Vector3(0f, -10000f, 0f);
             return;
         }
 

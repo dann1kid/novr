@@ -45,9 +45,14 @@ internal static class FloatingOriginUiRootPatch
                 return;
             }
 
-            if (root.GetComponent<PositionZeroBehavior>() != null)
+            if (root.GetComponent<PositionZeroBehavior>() != null &&
+                root.gameObject.layer != (int)LayerHelper.Layers.VrUi)
             {
-                root.position = Vector3.zero;
+                var worldCanvas = root.GetComponentInChildren<Canvas>();
+                if (worldCanvas == null || worldCanvas.renderMode != RenderMode.WorldSpace)
+                {
+                    root.position = Vector3.zero;
+                }
             }
 
             for (var i = 0; i < root.childCount; i++)

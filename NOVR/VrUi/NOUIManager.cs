@@ -60,6 +60,11 @@ public class NOUIManager : NOVRBehaviour
         ConfigureUiCameras();
         UpdateSmoothedPosition();
     }
+
+    private void LateUpdate()
+    {
+        WorldSpaceCanvasClipGuard.Apply(CockpitHudCamera);
+    }
     
     private void UpdateSmoothedPosition()
     {

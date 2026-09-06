@@ -4,6 +4,10 @@ NOVR is a reworked version of [UUVR](https://github.com/Raicuparta/uuvr) designe
 
 This tree is based on the [dann1kid/novr](https://github.com/dann1kid/novr) fork of [InfernoSuperNova/novr](https://github.com/InfernoSuperNova/novr), then patched for remaining VR gaps.
 
+## 0.4.11
+
+- **Opaque menu plane:** stock world-space canvases are no longer left on the headset origin. Leaning back should not leave a wall in the middle of the view.
+
 ## 0.4.10
 
 - **Black square fix:** the game's fade canvas is no longer a world-space quad through the HMD. It stays hidden except during a real scene fade.

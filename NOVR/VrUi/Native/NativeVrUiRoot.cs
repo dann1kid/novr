@@ -300,6 +300,7 @@ public class NativeVrUiRoot : NOVRBehaviour
 
         _root.transform.SetParent(null, true);
         ApplyMenuAnchor(menuDistance, menuHeightOffset);
+        KeepNativeMenuOffTheHeadset(menuDistance, menuHeightOffset);
         ApplyNativeCursorProjectionReference();
     }
 
@@ -338,6 +339,27 @@ public class NativeVrUiRoot : NOVRBehaviour
 
         _root.transform.position = position;
         _root.transform.rotation = _menuAnchorRotation;
+    }
+
+    private void KeepNativeMenuOffTheHeadset(float menuDistance, float menuHeightOffset)
+    {
+        if (_root == null || APIBus.CockpitHudCamera == null)
+        {
+            return;
+        }
+
+        var hud = APIBus.CockpitHudCamera.transform;
+        var toMenu = _root.transform.position - hud.position;
+        var planeDistance = Mathf.Abs(Vector3.Dot(toMenu, _root.transform.forward));
+        if (planeDistance >= 1.5f && toMenu.magnitude >= 1.5f)
+        {
+            return;
+        }
+
+        _menuAnchorInitialized = false;
+        CaptureMenuAnchor();
+        ApplyMenuAnchor(Mathf.Max(menuDistance, 3f), menuHeightOffset);
+        Debug.Log("[NOVR] Native VR menu was in the headset plane; moved it 3 m forward.");
     }
 
     private void ApplyNativeCursorProjectionReference()
@@ -869,6 +891,7 @@ public class NativeVrUiRoot : NOVRBehaviour
         _suppressedMainCanvasGroup.alpha = 0f;
         _suppressedMainCanvasGroup.interactable = false;
         _suppressedMainCanvasGroup.blocksRaycasts = false;
+        _mainCanvas.transform.position = new Vector3(0f, -10000f, 0f);
     }
 
     private void SuppressOriginalCanvases()
