@@ -1,0 +1,40 @@
+name: Build installers
+
+on:
+  push:
+    tags:
+      - "v*"
+      - "0.*"
+  workflow_dispatch:
+
+jobs:
+  installers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Build GUI installer
+        run: dotnet build NOVR.Installer/NOVR.Installer.csproj -c Release
+
+      - name: Normalize Linux installer name
+        run: |
+          if [ -f dist/NOVR.Installer-Linux.run ]; then
+            cp dist/NOVR.Installer-Linux.run dist/NOVR.Installer-Linux
+            chmod +x dist/NOVR.Installer-Linux
+          fi
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: novr-installers
+          path: |
+            dist/NOVR.Installer-Win.exe
+            dist/NOVR.Installer-Linux
+            dist/NOVR.Installer-Linux.run
+          if-no-files-found: error

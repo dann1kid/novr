@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SkipNuclearOptionReferences>true</SkipNuclearOptionReferences>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <ReleasePackageDistDir>$(MSBuildThisFileDirectory)../dist</ReleasePackageDistDir>
+    <ReleasePackagePath>$(ReleasePackageDistDir)/NOVR.zip</ReleasePackagePath>
+    <ReleasePackageSourceDir>$(GameLayoutOutputDir)/BepInEx</ReleasePackageSourceDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="NOVR.Build.props" />
+    <None Include="NOVR.Build.targets" />
+    <None Include="NOVR.Sources.props" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../NOVR/NOVR.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../NOVR.Patcher/NOVR.Patcher.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <Target Name="CreateReleaseZip" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <MakeDir Directories="$(ReleasePackageDistDir)" />
+    <Delete Files="$(ReleasePackagePath)" />
+    <ZipDirectory SourceDirectory="$(ReleasePackageSourceDir)" DestinationFile="$(ReleasePackagePath)" Overwrite="true" />
+  </Target>
+</Project>
