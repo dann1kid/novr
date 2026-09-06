@@ -79,12 +79,10 @@ public class NOUIManager : NOVRBehaviour
         var camera = poseDriver.gameObject.AddComponent<Camera>();
         var additionalCameraData = poseDriver.gameObject.AddComponent<UniversalAdditionalCameraData>();
         VrCameraManager.IgnoredCameras.Add(camera);
-        
 
-        // Must not submit its own XR view. A second stereo camera at depth 100 renders only
-        // the empty VR UI layer and replaces the game view with black in the headset.
-        camera.stereoTargetEye = StereoTargetEyeMask.None;
-        additionalCameraData.allowXRRendering = false;
+        // Overlay camera in the URP stack (0.4.3). stereo None + allowXRRendering false
+        // hid the VR cursor and native menus in the HMD while the 3D globe still drew.
+        camera.stereoTargetEye = StereoTargetEyeMask.Both;
         camera.targetTexture = null;
         camera.clearFlags = CameraClearFlags.Depth;
         camera.backgroundColor = Color.clear;
@@ -119,7 +117,7 @@ public class NOUIManager : NOVRBehaviour
 
     private static void ConfigureUiCamera(Camera camera)
     {
-        
+        camera.stereoTargetEye = StereoTargetEyeMask.Both;
         camera.clearFlags = CameraClearFlags.Depth;
         camera.backgroundColor = Color.clear;
         camera.targetTexture = null;

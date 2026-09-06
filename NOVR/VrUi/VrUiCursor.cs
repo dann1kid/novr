@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using NOVR.VrUi.SpecialBehavior;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -46,6 +47,7 @@ public class VrUiCursor: NOVRBehaviour
     private const float MaxYawDegrees = 65f;
     private const float MaxPitchDegrees = 45f;
     private const float DefaultProjectionDistance = 5;
+    private const float MinProjectionDistance = 1.0f;
     private const float CursorCanvasScale = 0.001f;
     private const int CursorTextureSize = 64;
     private const float CursorRingRadius = 12f;
@@ -215,7 +217,7 @@ public class VrUiCursor: NOVRBehaviour
         Vector3 worldDirection = referenceRotation * localDirection;
         Vector3 viewportSpace = camera.WorldToViewportPoint(camera.transform.position + worldDirection * DefaultProjectionDistance, Camera.MonoOrStereoscopicEye.Mono);
         Vector2 inScreenSpace = new Vector2(viewportSpace.x * Screen.width, viewportSpace.y * Screen.height);
-        float cursorDistance = GetDistanceUnderCursor(inScreenSpace);
+        float cursorDistance = Mathf.Max(GetDistanceUnderCursor(inScreenSpace), MinProjectionDistance);
         Vector3 pos = camera.transform.position + worldDirection * cursorDistance;
         _cursor.transform.position = pos;
         _cursor.transform.rotation = Quaternion.LookRotation(worldDirection, camera.transform.up);
@@ -304,6 +306,7 @@ public class VrUiCursor: NOVRBehaviour
         {
             if (result.gameObject == _cursor ||
                 result.distance < 0f ||
+                result.gameObject.GetComponentInParent<NOVRBlackoutCanvasBehavior>() != null ||
                 result.gameObject.GetComponentInParent<global::MapIcon>() != null)
             {
                 continue;
@@ -330,6 +333,7 @@ public class VrUiCursor: NOVRBehaviour
         distance = chosen.Value.worldPosition == Vector3.zero
             ? chosen.Value.distance
             : Vector3.Distance(cameraPos, chosen.Value.worldPosition);
+        distance = Mathf.Max(distance, MinProjectionDistance);
 
         return distance > 0f;
     }
@@ -403,7 +407,48 @@ public class VrUiCursor: NOVRBehaviour
         if (width <= 0) throw new System.InvalidOperationException($"[{nameof(VrUiCursor)}] Screen width is invalid ({width}).");
         return Mathf.Lerp(-MaxYawDegrees, MaxYawDegrees, x / width);
     }
-    private static bool IsRealCursorVisible() => Cursor.visible && Cursor.lockState != CursorLockMode.Locked;
+    private static bool IsRealCursorVisible()
+    {
+        if (Cursor.lockState == CursorLockMode.Locked)
+        {
+            return false;
+        }
+
+        if (Cursor.visible)
+        {
+            return true;
+        }
+
+        // PSVR2 / OpenXR often hide the hardware cursor while menus still need a pointer.
+        return IsXrSessionActive();
+    }
+
+    private static bool IsXrSessionActive()
+    {
+        try
+        {
+            var xrSettingsType = System.Type.GetType("UnityEngine.XR.XRSettings, UnityEngine.XRModule") ??
+                                 System.Type.GetType("UnityEngine.XR.XRSettings, UnityEngine.VRModule") ??
+                                 System.Type.GetType("UnityEngine.XR.XRSettings, UnityEngine");
+            if (xrSettingsType == null)
+            {
+                return false;
+            }
+
+            var enabled = xrSettingsType.GetProperty("enabled")?.GetValue(null, null);
+            if (enabled is bool enabledValue && !enabledValue)
+            {
+                return false;
+            }
+
+            var deviceActive = xrSettingsType.GetProperty("isDeviceActive")?.GetValue(null, null);
+            return deviceActive is not bool activeValue || activeValue;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     private static Texture2D CreateCursorTexture()
     {
