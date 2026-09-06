@@ -104,7 +104,13 @@ These steps are for developers building NOVR from source.
     dotnet build NOVR.Build/NOVR.Build.csproj -c Release
     ```
 
-    Then extract `dist/NOVR.zip` into `Nuclear Option/BepInEx`, or run `scripts/install-to-game.sh` after setting `NUCLEAR_OPTION_GAME_DIR`.
+    Then extract `dist/NOVR.zip` into `Nuclear Option/BepInEx`. On Windows, with Steam at the default path and BepInEx already installed:
+
+    ```powershell
+    powershell -ExecutionPolicy Bypass -File scripts\install-to-game.ps1
+    ```
+
+    That copies into `C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option\BepInEx`. Override the folder with `-GameDir` if needed. On Linux/Proton, use `scripts/install-to-game.sh` or set `NUCLEAR_OPTION_GAME_DIR`.
 
 ## Installer development
 

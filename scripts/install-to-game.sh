@@ -16,6 +16,10 @@ candidates+=(
   "$HOME/.local/share/Steam/steamapps/common/Nuclear Option"
   "/mnt/c/Program Files (x86)/Steam/steamapps/common/Nuclear Option"
   "/mnt/c/Program Files/Steam/steamapps/common/Nuclear Option"
+  "/c/Program Files (x86)/Steam/steamapps/common/Nuclear Option"
+  "/c/Program Files/Steam/steamapps/common/Nuclear Option"
+  "C:/Program Files (x86)/Steam/steamapps/common/Nuclear Option"
+  "C:/Program Files/Steam/steamapps/common/Nuclear Option"
 )
 
 GAME=""
