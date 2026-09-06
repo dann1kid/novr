@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>com.rlabrecque.steamworks.net</AssemblyName>
+    <RootNamespace>Steamworks</RootNamespace>
+    <OutputPath>$(NovrRepoRoot)lib/game-stubs</OutputPath>
+  </PropertyGroup>
+</Project>

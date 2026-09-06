@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>UnityEngine.JSONSerializeModule</AssemblyName>
+    <RootNamespace>UnityEngine</RootNamespace>
+    <OutputPath>$(NovrRepoRoot)lib/mono/modern</OutputPath>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>UnityEngine.UIElementsModule</AssemblyName>
+    <RootNamespace>UnityEngine.UIElements</RootNamespace>
+    <OutputPath>$(NovrRepoRoot)lib/mono/modern</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(NovrRepoRoot)lib/mono/modern/UnityEngine.CoreModule.dll">
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

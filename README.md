@@ -96,7 +96,15 @@ These steps are for developers building NOVR from source.
     dotnet build NuclearOptionVirtualRealityMod.sln -c Release
     ```
 
-    The build output is written under `build-output`, as well as copied directly to the BepInEx directory.
+    The build output is written under `build-output`. If Nuclear Option is found, the same files are also copied into its BepInEx folders. A Release build of `NOVR.Build` writes `dist/NOVR.zip`.
+
+    If Nuclear Option is not installed, the plugin still compiles against **compile-only stubs** in `tools/stubs`. Those stub DLLs match the game assembly names so the plugin binds to the real game at runtime. **Never copy `lib/game-stubs` into the game.** The stub build runs automatically when the game folder is missing:
+
+    ```bash
+    dotnet build NOVR.Build/NOVR.Build.csproj -c Release
+    ```
+
+    Then extract `dist/NOVR.zip` into `Nuclear Option/BepInEx`, or run `scripts/install-to-game.sh` after setting `NUCLEAR_OPTION_GAME_DIR`.
 
 ## Installer development
 

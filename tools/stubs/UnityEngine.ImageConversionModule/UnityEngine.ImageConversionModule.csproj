@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>UnityEngine.ImageConversionModule</AssemblyName>
+    <RootNamespace>UnityEngine</RootNamespace>
+    <OutputPath>$(NovrRepoRoot)lib/mono/modern</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(NovrRepoRoot)lib/mono/modern/UnityEngine.CoreModule.dll">
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

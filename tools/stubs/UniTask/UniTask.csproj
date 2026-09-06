@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>UniTask</AssemblyName>
+    <RootNamespace>Cysharp.Threading.Tasks</RootNamespace>
+    <OutputPath>$(NovrRepoRoot)lib/game-stubs</OutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+</Project>

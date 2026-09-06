@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Assembly-CSharp</AssemblyName>
+    <RootNamespace></RootNamespace>
+    <OutputPath>$(NovrRepoRoot)lib/game-stubs</OutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(NovrRepoRoot)lib/mono/modern/*.dll"><Private>false</Private></Reference>
+    <Reference Include="$(NovrRepoRoot)lib/game-stubs/Rewired_Core.dll"><Private>false</Private></Reference>
+    <Reference Include="$(NovrRepoRoot)lib/game-stubs/UniTask.dll"><Private>false</Private></Reference>
+    <Reference Include="$(NovrRepoRoot)lib/game-stubs/Unity.TextMeshPro.dll"><Private>false</Private></Reference>
+    <Reference Include="$(NovrRepoRoot)lib/game-stubs/com.rlabrecque.steamworks.net.dll"><Private>false</Private></Reference>
+    <Reference Include="$(NovrRepoRoot)lib/game-stubs/Assembly-CSharp-firstpass.dll"><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

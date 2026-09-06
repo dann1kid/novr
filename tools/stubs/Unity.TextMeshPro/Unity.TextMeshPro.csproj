@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Unity.TextMeshPro</AssemblyName>
+    <RootNamespace>TMPro</RootNamespace>
+    <OutputPath>$(NovrRepoRoot)lib/game-stubs</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(NovrRepoRoot)lib/mono/modern/UnityEngine.CoreModule.dll"><Private>false</Private></Reference>
+    <Reference Include="$(NovrRepoRoot)lib/mono/modern/UnityEngine.UIModule.dll"><Private>false</Private></Reference>
+    <Reference Include="$(NovrRepoRoot)lib/mono/modern/UnityEngine.UI.dll"><Private>false</Private></Reference>
+    <Reference Include="$(NovrRepoRoot)lib/mono/modern/UnityEngine.TextRenderingModule.dll"><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Assembly-CSharp-firstpass</AssemblyName>
+    <RootNamespace></RootNamespace>
+    <OutputPath>$(NovrRepoRoot)lib/game-stubs</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(NovrRepoRoot)lib/mono/modern/UnityEngine.CoreModule.dll"><Private>false</Private></Reference>
+    <Reference Include="$(NovrRepoRoot)lib/game-stubs/Rewired_Core.dll"><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

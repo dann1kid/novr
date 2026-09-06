@@ -394,3 +394,12 @@ build-output/
 dist/
 **/C:/
 _decomp/
+
+# Compile-only game stubs (rebuilt by tools/stubs; never copy into the game)
+lib/game-stubs/
+tools/__pycache__/
+tools/stubs/**/obj/
+tools/stubs/**/bin/
+tools/stubs/Assembly-CSharp/generated-state.json
+tools/inject-xrsettings/bin/
+tools/inject-xrsettings/obj/

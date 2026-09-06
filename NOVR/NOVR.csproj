@@ -17,6 +17,23 @@
     <ItemGroup>
         <ProjectReference Include="..\NOVR.XR.OpenXR\NOVR.XR.OpenXR.csproj" Private="false"/>
     </ItemGroup>
+    <ItemGroup Condition=" '$(NuclearOptionGameDirResolved)' == 'NUCLEAR_OPTION_NOT_FOUND' ">
+        <Reference Include="$(NuclearOptionFallbackLibDir)/*.dll" Exclude="$(NuclearOptionFallbackLibExcludes)">
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="$(NovrRepoRoot)/lib/game-stubs/*.dll">
+            <Private>False</Private>
+        </Reference>
+    </ItemGroup>
+    <Target Name="BuildCompileOnlyGameStubs" BeforeTargets="ResolveAssemblyReferences" Condition="'$(NuclearOptionGameDirResolved)' == 'NUCLEAR_OPTION_NOT_FOUND' And Exists('$(MSBuildThisFileDirectory)../tools/stubs/BuildStubs.proj')">
+        <MSBuild Projects="$(MSBuildThisFileDirectory)../tools/stubs/BuildStubs.proj" Targets="Build" Properties="Configuration=Release" />
+    </Target>
+    <Target Name="WritePluginVersionFile" AfterTargets="Build">
+        <WriteLinesToFile File="$(TargetDir)version.txt" Lines="0.4.5" Overwrite="true" Encoding="UTF-8" />
+    </Target>
+    <ItemGroup Condition="'$(RestoreBepInExFromNuget)' == 'true'">
+        <PackageReference Include="BepInEx.Core" Version="5.4.16" />
+    </ItemGroup>
     <ItemGroup>
         <Content Include="Assets\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

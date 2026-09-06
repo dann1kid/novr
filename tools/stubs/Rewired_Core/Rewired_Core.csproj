@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Rewired_Core</AssemblyName>
+    <RootNamespace>Rewired</RootNamespace>
+    <OutputPath>$(NovrRepoRoot)lib/game-stubs</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(NovrRepoRoot)lib/mono/modern/UnityEngine.CoreModule.dll"><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

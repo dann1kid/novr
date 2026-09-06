@@ -1,0 +1,18 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+  </PropertyGroup>
+  <Target Name="Build">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)UnityEngine.JSONSerializeModule/UnityEngine.JSONSerializeModule.csproj" Properties="Configuration=$(Configuration)" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)UnityEngine.TextRenderingModule/UnityEngine.TextRenderingModule.csproj" Properties="Configuration=$(Configuration)" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)UnityEngine.AudioModule/UnityEngine.AudioModule.csproj" Properties="Configuration=$(Configuration)" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)UnityEngine.ImageConversionModule/UnityEngine.ImageConversionModule.csproj" Properties="Configuration=$(Configuration)" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)UnityEngine.UIElementsModule/UnityEngine.UIElementsModule.csproj" Properties="Configuration=$(Configuration)" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)UniTask/UniTask.csproj" Properties="Configuration=$(Configuration)" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)Steamworks.NET/Steamworks.NET.csproj" Properties="Configuration=$(Configuration)" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)Rewired_Core/Rewired_Core.csproj" Properties="Configuration=$(Configuration)" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)Unity.TextMeshPro/Unity.TextMeshPro.csproj" Properties="Configuration=$(Configuration)" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)Assembly-CSharp-firstpass/Assembly-CSharp-firstpass.csproj" Properties="Configuration=$(Configuration)" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)Assembly-CSharp/Assembly-CSharp.csproj" Properties="Configuration=$(Configuration)" />
+  </Target>
+</Project>

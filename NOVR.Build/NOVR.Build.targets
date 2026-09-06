@@ -9,7 +9,7 @@
 
   <Target Name="StageGameLayout" AfterTargets="Build" Condition="'$(GameDeployPath)' != '' And '$(SkipGameLayoutStaging)' != 'true'">
     <ItemGroup>
-      <GameLayoutDeployFiles Include="$(TargetDir)**/*" Exclude="$(TargetDir)Unity.XR.*.dll" />
+      <GameLayoutDeployFiles Include="$(TargetDir)**/*" Exclude="$(TargetDir)Unity.XR.*.dll;$(TargetDir)NOVR.XR.OpenVR.dll" />
     </ItemGroup>
 
     <RemoveDir Directories="$(GameLayoutOutputDir)/$(GameDeployPath)" />

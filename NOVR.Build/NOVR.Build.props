@@ -10,7 +10,12 @@
     <DefaultItemExcludes>$(DefaultItemExcludes);**/C:/**;$(BuildOutputDir)/**</DefaultItemExcludes>
     <DefaultExcludesInProjectFolder>$(DefaultExcludesInProjectFolder);**/C:/**;$(BuildOutputDir)/**</DefaultExcludesInProjectFolder>
     <DefineConstants>$(DefineConstants);MONO;MODERN</DefineConstants>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)NOVR.Sources.props" />
 </Project>
