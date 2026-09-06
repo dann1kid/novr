@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Build mod zip
+        run: dotnet build NOVR.Build/NOVR.Build.csproj -c Release
+
+      - name: Build GUI installer
+        run: dotnet build NOVR.Installer/NOVR.Installer.csproj -c Release
+        continue-on-error: true
+
+      - name: Normalize Linux installer name
+        run: |
+          if [ -f dist/NOVR.Installer-Linux.run ]; then
+            cp dist/NOVR.Installer-Linux.run dist/NOVR.Installer-Linux
+            chmod +x dist/NOVR.Installer-Linux
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: NOVR ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            dist/NOVR.zip
+            dist/NOVR.Installer-Win.exe
+            dist/NOVR.Installer-Linux
+          fail_on_unmatched_files: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

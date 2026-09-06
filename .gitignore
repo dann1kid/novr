@@ -392,6 +392,7 @@ FodyWeavers.xsd
 # Local/generated mod build outputs
 build-output/
 dist/
+NOVR-*.zip
 **/C:/
 _decomp/
 
