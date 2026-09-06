@@ -1,36 +1,29 @@
+using NOVR.VrUi.Native;
 using UnityEngine;
 
 namespace NOVR.VrUi.SpecialBehavior;
 
 public class NOVRGameplayUIBehaviour : UIRenderedCanvasBehavior
 {
-    private const float PanelDistanceMeters = 3.0f;
     private static readonly Vector3 PanelScale = new(0.003f, 0.003f, 0.003f);
 
     private void LateUpdate()
     {
-        if (!isActiveAndEnabled)
+        if (NativeVrUiRoot.ShouldHideStockMenus)
         {
-            return;
-        }
+            var canvas = GetComponent<Canvas>();
+            if (canvas != null)
+            {
+                canvas.enabled = false;
+            }
 
-        var canvas = GetComponent<Canvas>();
-        if (canvas != null && !canvas.enabled)
-        {
             transform.position = new Vector3(0f, -10000f, 0f);
             return;
         }
 
-        VrFacingUiPlacement.Apply(transform, PanelDistanceMeters, 0f, PanelScale);
-        var cursor = VrUiCursor.I;
-        if (cursor != null && cursor.IsActive)
-        {
-            cursor.SetProjectionReferenceRotation(transform.rotation);
-        }
-    }
-
-    private void OnDisable()
-    {
-        VrUiCursor.I?.ClearProjectionReferenceRotation();
+        // 0.4.3: world-locked in front of origin, not following headset yaw.
+        transform.localScale = PanelScale;
+        transform.localPosition = new Vector3(0f, 0f, 3f);
+        transform.localRotation = Quaternion.identity;
     }
 }

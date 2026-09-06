@@ -4,6 +4,10 @@ NOVR is a reworked version of [UUVR](https://github.com/Raicuparta/uuvr) designe
 
 This tree is based on the [dann1kid/novr](https://github.com/dann1kid/novr) fork of [InfernoSuperNova/novr](https://github.com/InfernoSuperNova/novr), then patched for remaining VR gaps.
 
+## 0.4.12
+
+- **Stock menus no longer follow the headset.** The server browser and other leftover game canvases are hidden while native VR UI is on, and the mouse cursor is driven in OpenXR even if the OS cursor is hidden.
+
 ## 0.4.11
 
 - **Opaque menu plane:** stock world-space canvases are no longer left on the headset origin. Leaning back should not leave a wall in the middle of the view.

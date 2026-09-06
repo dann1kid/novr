@@ -69,6 +69,7 @@ public class NativeVrUiRoot : NOVRBehaviour
     public VrPointerState PointerState => _pointerState;
     public GameObject? OriginalMainCanvas => _mainCanvas;
     public NativeGameActionAdapter Actions => _actions;
+    public static bool ShouldHideStockMenus { get; private set; }
 
     private void Start()
     {
@@ -83,6 +84,7 @@ public class NativeVrUiRoot : NOVRBehaviour
 
         if (!IsNativeMenuUiEnabled)
         {
+            ShouldHideStockMenus = false;
             RestoreOriginalMainCanvas();
             if (_root != null)
             {
@@ -98,6 +100,7 @@ public class NativeVrUiRoot : NOVRBehaviour
 
         if (_stockOverlayPassthrough)
         {
+            ShouldHideStockMenus = false;
             RestoreOriginalMainCanvas();
             if (_root != null)
             {
@@ -108,6 +111,8 @@ public class NativeVrUiRoot : NOVRBehaviour
             SetUtilityWidgetMode(UtilityWidgetMode.EnableNativeUi);
             return;
         }
+
+        ShouldHideStockMenus = true;
 
         var mainCanvasActive = _mainCanvas != null && _mainCanvas.activeInHierarchy;
         var controlMapperOpen = IsControlMapperOpen();
@@ -191,7 +196,7 @@ public class NativeVrUiRoot : NOVRBehaviour
             _root.SetActive(shouldShowNativeUi);
         }
 
-        SuppressOriginalMainCanvas(shouldShowNativeUi);
+        SuppressOriginalMainCanvas(true);
     }
 
     protected override void OnSettingChanged()
@@ -351,7 +356,7 @@ public class NativeVrUiRoot : NOVRBehaviour
         var hud = APIBus.CockpitHudCamera.transform;
         var toMenu = _root.transform.position - hud.position;
         var planeDistance = Mathf.Abs(Vector3.Dot(toMenu, _root.transform.forward));
-        if (planeDistance >= 1.5f && toMenu.magnitude >= 1.5f)
+        if (planeDistance >= 0.45f && toMenu.magnitude >= 0.45f)
         {
             return;
         }
@@ -872,10 +877,9 @@ public class NativeVrUiRoot : NOVRBehaviour
             return;
         }
 
-        if (_mainCanvas == null) return;
-
         SuppressOriginalCanvases();
 
+        if (_mainCanvas == null) return;
         if (_suppressedMainCanvasGroup != null) return;
 
         _mainCanvasHadCanvasGroup = _mainCanvas.TryGetComponent(out _suppressedMainCanvasGroup);
@@ -896,21 +900,54 @@ public class NativeVrUiRoot : NOVRBehaviour
 
     private void SuppressOriginalCanvases()
     {
+        SuppressNamedStockCanvas("MainCanvas");
+        SuppressNamedStockCanvas("MenuCanvas");
+        SuppressNamedStockCanvas("MaximizedMapCanvas");
+
         if (_mainCanvas == null) return;
 
         var canvases = _mainCanvas.GetComponentsInChildren<Canvas>(true);
         for (var index = 0; index < canvases.Length; index++)
         {
-            var canvas = canvases[index];
-            if (canvas == null) continue;
+            SuppressCanvas(canvases[index]);
+        }
+    }
 
-            if (!HasSuppressedCanvasState(canvas))
+    private void SuppressNamedStockCanvas(string name)
+    {
+        var gameObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+        for (var index = 0; index < gameObjects.Length; index++)
+        {
+            var gameObject = gameObjects[index];
+            if (gameObject == null || gameObject.name != name)
             {
-                _suppressedCanvasStates.Add(new SuppressedCanvasState(canvas, canvas.enabled));
+                continue;
             }
 
-            canvas.enabled = false;
+            var canvas = gameObject.GetComponent<Canvas>();
+            if (canvas == null)
+            {
+                continue;
+            }
+
+            SuppressCanvas(canvas);
+            gameObject.transform.position = new Vector3(0f, -10000f, 0f);
         }
+    }
+
+    private void SuppressCanvas(Canvas? canvas)
+    {
+        if (canvas == null)
+        {
+            return;
+        }
+
+        if (!HasSuppressedCanvasState(canvas))
+        {
+            _suppressedCanvasStates.Add(new SuppressedCanvasState(canvas, canvas.enabled));
+        }
+
+        canvas.enabled = false;
     }
 
     private bool HasSuppressedCanvasState(Canvas canvas)

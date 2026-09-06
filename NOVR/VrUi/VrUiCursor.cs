@@ -125,7 +125,7 @@ public class VrUiCursor: NOVRBehaviour
 
     private void Update()
     {
-        if (!Application.isFocused)
+        if (!Application.isFocused && !IsXrSessionActive())
         {
             if (_cursor != null && _cursor.activeSelf)
             {
@@ -145,11 +145,12 @@ public class VrUiCursor: NOVRBehaviour
         
         if (_virtualMouse == null)
         {
-            _realMouse = Mouse.current ?? throw new System.InvalidOperationException(
-                $"[{nameof(VrUiCursor)}] Unity InputSystem could not find an active hardware Mouse device during initialization.");
+            _realMouse = Mouse.current;
             _virtualMouse = InputSystem.AddDevice<Mouse>("VirtualMouse");
             Debug.Log($"[NOVR] Added VirtualMouse device: name='{_virtualMouse.name}', path='{_virtualMouse.path}', displayName='{_virtualMouse.displayName}'");
         }
+
+        _realMouse ??= Mouse.current;
 
         if (!_hasInitializedEventSystem)
         {
@@ -206,7 +207,13 @@ public class VrUiCursor: NOVRBehaviour
         }
         
         var mouse = _realMouse;
-        if (mouse == null) return;
+        if (mouse == null)
+        {
+            var fallbackDirection = GetProjectionReferenceRotation() * Vector3.forward;
+            _cursor.transform.position = camera.transform.position + fallbackDirection * DefaultProjectionDistance;
+            _cursor.transform.rotation = Quaternion.LookRotation(fallbackDirection, camera.transform.up);
+            return;
+        }
 
         var mousePos = mouse.position.ReadValue();
         float cursorPitch = ProjectPitchAngle(mousePos.y);
