@@ -1,11 +1,11 @@
-# NOVR 0.4.14
+# NOVR 0.4.15
 
-Close the game, then extract `NOVR-0.4.14.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.14`.
+Close the game, then extract `NOVR-0.4.15.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.15`.
 
-## Black headset and clipping plane
+## Gray pancake on a black view
 
-The VR UI overlay camera is now fully disabled and removed from every URP camera stack, so it cannot replace the game with black. Menus and the cursor are drawn by the headset camera.
+The native VR menu was a 2 m × 4 m world-space canvas drawn by the headset camera, so it filled the view as a gray disc and hid the hangar.
 
-Full-screen native menu backgrounds are no longer copied into the world. Stock world-space canvases that sit in the headset plane are parked off-origin. The fade quad only appears during a real CanvasGroup fade, not as a leftover wall you can walk through.
+0.4.15 turns that native canvas off and restores the 0.4.8 overlay (in the camera stack, not submitting its own stereo view). You should see the hangar and the game's own menus again, world-locked about 3 m in front of their parent — not glued to your head.
 
 Stereoscopic Zoom View is still temporarily off. HUD layout from 0.4.6 is unchanged.

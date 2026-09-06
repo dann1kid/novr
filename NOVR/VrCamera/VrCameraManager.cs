@@ -96,8 +96,7 @@ public class VrCameraManager: MonoBehaviour
             stack.AddRange(rootUniversalAdditionalCameraData.cameraStack);
             for (var i = stack.Count - 1; i >= 0; i--)
             {
-                var overlay = stack[i];
-                if (overlay == null || overlay.name == "VrCockpitHudCamera")
+                if (stack[i] == null)
                 {
                     stack.RemoveAt(i);
                 }

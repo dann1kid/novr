@@ -82,7 +82,7 @@ public class VrUiCursor: NOVRBehaviour
     {
         get
         {
-            return APIBus.HeadsetCamera ?? APIBus.CockpitHudCamera;
+            return APIBus.CockpitHudCamera;
         }
     }
     

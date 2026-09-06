@@ -71,6 +71,11 @@ public class NativeVrUiRoot : NOVRBehaviour
     public NativeGameActionAdapter Actions => _actions;
     public static bool ShouldHideStockMenus { get; private set; }
 
+    // The native 2000×1125 world-space canvas is a full-view gray pancake in the
+    // HMD. 0.4.15 keeps the game's 0.4.3 menus until that canvas can sit on the
+    // overlay without covering the hangar.
+    private const bool AllowNativeMenuCanvas = false;
+
     private void Start()
     {
         RefreshEnabledState();
@@ -79,7 +84,6 @@ public class NativeVrUiRoot : NOVRBehaviour
     private void Update()
     {
         _pointerState.Update(VrUiCursor.I);
-        EnsureRoot();
         ScanForMainMenuCanvas();
 
         if (!IsNativeMenuUiEnabled)
@@ -92,11 +96,11 @@ public class NativeVrUiRoot : NOVRBehaviour
             }
             _menuAnchorInitialized = false;
             ClearNativeCursorProjectionReference();
-            SetUtilityWidgetMode(ShouldShowStockNativeUiToggle()
-                ? UtilityWidgetMode.EnableNativeUi
-                : UtilityWidgetMode.Hidden);
+            SetUtilityWidgetMode(UtilityWidgetMode.Hidden);
             return;
         }
+
+        EnsureRoot();
 
         if (_stockOverlayPassthrough)
         {
@@ -280,7 +284,7 @@ public class NativeVrUiRoot : NOVRBehaviour
 
         if (_canvas != null)
         {
-            _canvas.worldCamera = APIBus.HeadsetCamera ?? APIBus.CockpitHudCamera;
+            _canvas.worldCamera = APIBus.CockpitHudCamera;
             _canvas.planeDistance = menuDistance;
         }
 
@@ -348,7 +352,7 @@ public class NativeVrUiRoot : NOVRBehaviour
 
     private void KeepNativeMenuOffTheHeadset(float menuDistance, float menuHeightOffset)
     {
-        var headset = APIBus.HeadsetCamera ?? APIBus.CockpitHudCamera;
+        var headset = APIBus.CockpitHudCamera;
         if (_root == null || headset == null)
         {
             return;
@@ -491,7 +495,7 @@ public class NativeVrUiRoot : NOVRBehaviour
 
         if (_recenterWidgetCanvas != null)
         {
-            _recenterWidgetCanvas.worldCamera = APIBus.HeadsetCamera ?? APIBus.CockpitHudCamera;
+            _recenterWidgetCanvas.worldCamera = APIBus.CockpitHudCamera;
         }
     }
 
@@ -1012,7 +1016,7 @@ public class NativeVrUiRoot : NOVRBehaviour
     }
 
     private static bool IsNativeMenuUiEnabled =>
-        ModConfiguration.Instance?.EnableNativeMenuUi.Value == true;
+        AllowNativeMenuCanvas && ModConfiguration.Instance?.EnableNativeMenuUi.Value == true;
 
     private enum UtilityWidgetMode
     {

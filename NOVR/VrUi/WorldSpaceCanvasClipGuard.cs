@@ -9,8 +9,12 @@ internal static class WorldSpaceCanvasClipGuard
 
     public static void Apply(Camera? headsetCamera)
     {
-        var hideStock = Native.NativeVrUiRoot.ShouldHideStockMenus;
-        var headsetPosition = headsetCamera != null ? headsetCamera.transform.position : (Vector3?)null;
+        if (headsetCamera == null)
+        {
+            return;
+        }
+
+        var headsetPosition = headsetCamera.transform.position;
         var canvases = Resources.FindObjectsOfTypeAll<Canvas>();
         for (var i = 0; i < canvases.Length; i++)
         {
@@ -26,31 +30,17 @@ internal static class WorldSpaceCanvasClipGuard
                 continue;
             }
 
-            if (IsProtected(gameObject))
+            if (IsProtected(gameObject) || !IsLeftoverOccluder(gameObject.name))
             {
                 continue;
             }
 
-            if (hideStock || ShouldParkAsBlockingQuad(gameObject, canvas.transform, headsetPosition))
+            if (IsClippingHeadset(canvas.transform, headsetPosition))
             {
-                Hide(canvas);
+                canvas.enabled = false;
+                canvas.transform.position = new Vector3(0f, ParkY, 0f);
             }
         }
-    }
-
-    private static bool ShouldParkAsBlockingQuad(GameObject gameObject, Transform canvasTransform, Vector3? headsetPosition)
-    {
-        if (!IsLikelyBlockingQuad(gameObject.name))
-        {
-            return false;
-        }
-
-        if (!headsetPosition.HasValue)
-        {
-            return IsStockMenuName(gameObject.name);
-        }
-
-        return IsClippingHeadset(canvasTransform, headsetPosition.Value);
     }
 
     private static bool IsClippingHeadset(Transform canvasTransform, Vector3 headsetPosition)
@@ -68,34 +58,16 @@ internal static class WorldSpaceCanvasClipGuard
     {
         var name = gameObject.name;
         return name == "VrUiCursorCanvas" ||
-               name == "NOVR_VrFadeQuad" ||
                name == "NOVR Native VR UI" ||
-               name == "NOVR Native VR UI Recenter Widget";
-    }
-
-    private static bool IsLikelyBlockingQuad(string name)
-    {
-        return IsStockMenuName(name) ||
-               name == "Canvas" ||
-               name.IndexOf("Blackout", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-               name.IndexOf("Background", System.StringComparison.OrdinalIgnoreCase) >= 0;
-    }
-
-    private static bool IsStockMenuName(string name)
-    {
-        return name == "MainCanvas" ||
+               name == "NOVR Native VR UI Recenter Widget" ||
+               name == "MainCanvas" ||
                name == "MenuCanvas" ||
                name == "MaximizedMapCanvas";
     }
 
-    private static void Hide(Canvas canvas)
+    private static bool IsLeftoverOccluder(string name)
     {
-        canvas.enabled = false;
-        Park(canvas.transform);
-    }
-
-    private static void Park(Transform transform)
-    {
-        transform.position = new Vector3(0f, ParkY, 0f);
+        return name == "NOVR_VrFadeQuad" ||
+               name.IndexOf("Blackout", System.StringComparison.OrdinalIgnoreCase) >= 0;
     }
 }

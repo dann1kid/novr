@@ -9,9 +9,9 @@ public class NOVRGameplayUIBehaviour : UIRenderedCanvasBehavior
 
     private void LateUpdate()
     {
+        var canvas = GetComponent<Canvas>();
         if (NativeVrUiRoot.ShouldHideStockMenus)
         {
-            var canvas = GetComponent<Canvas>();
             if (canvas != null)
             {
                 canvas.enabled = false;
@@ -21,7 +21,11 @@ public class NOVRGameplayUIBehaviour : UIRenderedCanvasBehavior
             return;
         }
 
-        // 0.4.3: world-locked in front of origin, not following headset yaw.
+        if (canvas != null)
+        {
+            canvas.enabled = true;
+        }
+
         transform.localScale = PanelScale;
         transform.localPosition = new Vector3(0f, 0f, 3f);
         transform.localRotation = Quaternion.identity;

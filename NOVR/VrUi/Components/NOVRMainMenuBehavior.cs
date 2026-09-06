@@ -16,6 +16,12 @@ public class NOVRMainMenuBehavior : UIRenderedCanvasBehavior
         }
 
         // 0.4.3: world-locked 3 m along the parent, not glued to the headset.
+        var canvas = GetComponent<Canvas>();
+        if (canvas != null)
+        {
+            canvas.enabled = true;
+        }
+
         transform.localScale = PanelScale;
         transform.localPosition = new Vector3(0f, 0f, 3f);
         transform.localRotation = Quaternion.identity;
