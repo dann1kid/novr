@@ -54,7 +54,7 @@ public class NativeCustomizeMissionPanel : MonoBehaviour
     private void BuildLayout(RectTransform root)
     {
         _container = CreateContainer("Native Customize Mission", root, root.sizeDelta);
-        CreateImage("Background", _container, BackgroundColor, Vector2.zero, _container.sizeDelta);
+        CreateImage("Background", _container, BackgroundColor, Vector2.zero, Vector2.zero);
         _titleText = CreateText("Header", _container, "CUSTOMIZE MISSION", new Vector2(0f, NativeUiLayout.HeaderY), NativeUiLayout.HeaderSize, 22, TextAnchor.MiddleCenter, Color.white);
 
         var panel = CreatePanel("Settings Panel", _container, PanelColor, new Vector2(0f, -15f), new Vector2(1100f, 950f));

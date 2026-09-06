@@ -106,7 +106,7 @@ public class NativeSettingsPanel : MonoBehaviour
     private void BuildLayout(RectTransform root)
     {
         _container = CreateContainer("Native Settings", root, root.sizeDelta);
-        CreateImage("Background", _container, BackgroundColor, Vector2.zero, _container.sizeDelta);
+        CreateImage("Background", _container, BackgroundColor, Vector2.zero, Vector2.zero);
         CreateText("Header", _container, "SETTINGS", new Vector2(0f, NativeUiLayout.HeaderY), NativeUiLayout.HeaderSize, 22, TextAnchor.MiddleCenter, Color.white);
 
         var tabPanel = CreatePanel("Settings Tabs", _container, PanelColor, new Vector2(-770f, -15f), new Vector2(280f, 950f));

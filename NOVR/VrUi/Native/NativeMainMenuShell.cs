@@ -44,7 +44,6 @@ public class NativeMainMenuShell : MonoBehaviour
         _containerTransform = container;
         _container = container.gameObject;
 
-        CreateImage("Background", container, BackgroundColor, Vector2.zero, container.sizeDelta);
         CreateText("Header", container, "MAIN MENU", new Vector2(0f, NativeUiLayout.HeaderY), NativeUiLayout.HeaderSize, 22, TextAnchor.MiddleCenter, Color.white);
         CreateText("Game Title", container, "NUCLEAR OPTION", new Vector2(760f, 470f), new Vector2(440f, 60f), 40, TextAnchor.MiddleRight, Color.white);
 

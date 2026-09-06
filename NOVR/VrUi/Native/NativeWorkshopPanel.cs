@@ -83,7 +83,7 @@ public class NativeWorkshopPanel : MonoBehaviour
     private void BuildLayout(RectTransform root)
     {
         _container = CreateContainer("Native Workshop", root, root.sizeDelta);
-        CreateImage("Background", _container, BackgroundColor, Vector2.zero, _container.sizeDelta);
+        CreateImage("Background", _container, BackgroundColor, Vector2.zero, Vector2.zero);
         CreateText("Header", _container, "WORKSHOP", new Vector2(0f, NativeUiLayout.HeaderY), NativeUiLayout.HeaderSize, 22, TextAnchor.MiddleCenter, Color.white);
 
         var listPanel = CreatePanel("Workshop List Panel", _container, PanelColor, new Vector2(-425f, -15f), new Vector2(1030f, 950f));

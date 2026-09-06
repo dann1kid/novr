@@ -140,7 +140,7 @@ public class NativeMultiplayerPanel : MonoBehaviour
     private void BuildLayout(RectTransform root)
     {
         _container = CreateContainer("Native Multiplayer", root, root.sizeDelta);
-        CreateImage("Background", _container, BackgroundColor, Vector2.zero, _container.sizeDelta);
+        CreateImage("Background", _container, BackgroundColor, Vector2.zero, Vector2.zero);
         CreateText("Header", _container, "MULTIPLAYER", new Vector2(0f, NativeUiLayout.HeaderY), NativeUiLayout.HeaderSize, 22, TextAnchor.MiddleCenter, Color.white);
 
         var listPanel = CreatePanel("Lobby List Panel", _container, PanelColor, new Vector2(-330f, -15f), new Vector2(1220f, 950f));

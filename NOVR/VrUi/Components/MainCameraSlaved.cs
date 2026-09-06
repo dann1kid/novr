@@ -1,17 +1,27 @@
-using System;
 using UnityEngine;
 
 namespace NOVR.VrUi.SpecialBehavior;
 
 public class MainCameraSlaved : MonoBehaviour
 {
-
-    private Camera MainCamera => APIBus.MainCamera;
-
     private void Update()
     {
-        var camTrans = MainCamera.transform;
-        transform.SetPositionAndRotation(camTrans.position, camTrans.rotation);
+        FollowHeadset();
     }
-    
+
+    private void LateUpdate()
+    {
+        FollowHeadset();
+    }
+
+    private void FollowHeadset()
+    {
+        var cam = APIBus.MainCamera;
+        if (cam == null)
+        {
+            return;
+        }
+
+        transform.SetPositionAndRotation(cam.transform.position, cam.transform.rotation);
+    }
 }

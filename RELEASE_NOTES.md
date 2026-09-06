@@ -1,11 +1,11 @@
-# NOVR 0.4.12
+# NOVR 0.4.13
 
-Close the game, then extract `NOVR-0.4.12.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.12`.
+Close the game, then extract `NOVR-0.4.13.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.13`.
 
-## Stock menus glued to the headset
+## Black headset plus leftover plane
 
-0.4.11 pushed leftover stock canvases (including the server browser) in front of the headset every frame, so they rotated with your head and stole the cursor.
+The VR UI overlay camera was submitting its own stereo view, which replaced the game with black. A full-size native menu background sat in the world, so leaning the headset through it showed a wall.
 
-0.4.12 hides those stock menus while native VR UI is on, and parks remaining game menus in the world like 0.4.3 instead of following yaw. The VR cursor stays available in OpenXR even if the hardware cursor is hidden.
+0.4.13 stops that overlay from rendering to the HMD. VR UI is drawn by the headset camera. Full-screen menu backgrounds are removed so they cannot clip the view.
 
 Stereoscopic Zoom View is still temporarily off. HUD layout from 0.4.6 is unchanged.
