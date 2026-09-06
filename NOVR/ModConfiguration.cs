@@ -18,6 +18,8 @@ public class ModConfiguration
     public readonly ConfigEntry<float> ZoomSpeed;
     public readonly ConfigEntry<float> MaximumZoom;
     public readonly ConfigEntry<bool> InstantZoomOut;
+    public readonly ConfigEntry<float> HudMarkerRingDegrees;
+    public readonly ConfigEntry<float> PitchLadderWidth;
 
     public ModConfiguration(ConfigFile config)
     {
@@ -75,5 +77,21 @@ public class ModConfiguration
             "Instant Zoom Out",
             false,
             "When enabled, any Zoom View out input immediately returns the headset view to 1x magnification.");
+
+        HudMarkerRingDegrees = config.Bind(
+            "VR HUD",
+            "Marker Ring Degrees",
+            28.0f,
+            new ConfigDescription(
+                "How wide the off-boresight HMD/radar contact ring is, in degrees. Smaller values pull markers out of peripheral vision.",
+                new AcceptableValueRange<float>(16.0f, 50.0f)));
+
+        PitchLadderWidth = config.Bind(
+            "VR HUD",
+            "Pitch Ladder Width",
+            0.34f,
+            new ConfigDescription(
+                "Horizontal scale of the climb/pitch ladder. Lower values make the degree ring narrower and more HUD-like.",
+                new AcceptableValueRange<float>(0.18f, 1.0f)));
     }
 }

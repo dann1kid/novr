@@ -18,7 +18,7 @@ namespace NOVR;
 [BepInPlugin(
     "deltawing.novr",
     "NOVR",
-    "0.4.5")]
+    "0.4.6")]
 public class NOVRPlugin : BaseUnityPlugin
 {
     
@@ -42,6 +42,7 @@ public class NOVRPlugin : BaseUnityPlugin
     private void TrackingAcquired(XRNodeState obj)
     {
         NOVRHeadsetData.CalibrateTranslation();
+        NOVRHeadsetData.CalibrateRotation();
     }
      
     private void Awake()

@@ -57,20 +57,41 @@ public class NOVRHeadsetData : NOVRBehaviour
             return;
         }
 
-        var currentRotation = (Quaternion)_trackingRotationMethod.Invoke(null, TrackingMethodArgs);
-        var currentEuler = currentRotation.eulerAngles;
-        Vector3 currentError = new(
-            -Mathf.DeltaAngle(0f, currentEuler.x),
-            -Mathf.DeltaAngle(0f, currentEuler.y),
-            -Mathf.DeltaAngle(0f, currentEuler.z)
-        );
+        var tracking = (Quaternion)_trackingRotationMethod.Invoke(null, TrackingMethodArgs);
+        var existing = RotationCalibrationOffset.eulerAngles;
+        bool ov = overrideExistingInNonCalibratedAxes;
 
-        bool ov  = overrideExistingInNonCalibratedAxes;
-        RotationCalibrationOffset = Quaternion.Euler(
-            (calibrationAxes & CalibrationAxes.X) != 0 ? currentError.x : ov ? RotationCalibrationOffset.eulerAngles.x : 0,
-            (calibrationAxes & CalibrationAxes.Y) != 0 ? currentError.y : ov ? RotationCalibrationOffset.eulerAngles.y : 0,
-            (calibrationAxes & CalibrationAxes.Z) != 0 ? currentError.z : ov ? RotationCalibrationOffset.eulerAngles.z : 0
-        );
+        var yawOffset = 0f;
+        if ((calibrationAxes & CalibrationAxes.Yaw) != 0)
+        {
+            var planarForward = Vector3.ProjectOnPlane(tracking * Vector3.forward, Vector3.up);
+            if (planarForward.sqrMagnitude > 0.0001f)
+            {
+                yawOffset = -Mathf.Atan2(planarForward.x, planarForward.z) * Mathf.Rad2Deg;
+            }
+        }
+        else if (ov)
+        {
+            yawOffset = existing.y;
+        }
+
+        var pitchOffset = 0f;
+        var rollOffset = 0f;
+        if ((calibrationAxes & CalibrationAxes.Pitch) != 0 || (calibrationAxes & CalibrationAxes.Roll) != 0)
+        {
+            var euler = tracking.eulerAngles;
+            if ((calibrationAxes & CalibrationAxes.Pitch) != 0)
+                pitchOffset = -Mathf.DeltaAngle(0f, euler.x);
+            else if (ov)
+                pitchOffset = existing.x;
+
+            if ((calibrationAxes & CalibrationAxes.Roll) != 0)
+                rollOffset = -Mathf.DeltaAngle(0f, euler.z);
+            else if (ov)
+                rollOffset = existing.z;
+        }
+
+        RotationCalibrationOffset = Quaternion.Euler(pitchOffset, yawOffset, rollOffset);
     }
     
     

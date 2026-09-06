@@ -74,4 +74,38 @@ internal static class VrFacingUiPlacement
             camera.transform.position + camera.transform.forward * distance,
             camera.transform.rotation);
     }
+
+    public static void ApplyCockpitStabilizedHudPlane(Transform transform, float distance)
+    {
+        if (NOUIManager.I == null)
+        {
+            return;
+        }
+
+        var camera = APIBus.CockpitHudCamera;
+        if (camera == null)
+        {
+            return;
+        }
+
+        var gameCamera = APIBus.MainCamera;
+        var aircraftForward = gameCamera != null && gameCamera.transform.parent != null
+            ? gameCamera.transform.parent.forward
+            : camera.transform.forward;
+        var planarAircraft = Vector3.ProjectOnPlane(aircraftForward, Vector3.up);
+        if (planarAircraft.sqrMagnitude < 0.0001f)
+        {
+            planarAircraft = aircraftForward;
+        }
+
+        planarAircraft.Normalize();
+        var forward = Vector3.Slerp(planarAircraft, camera.transform.forward, 0.18f).normalized;
+        if (forward.sqrMagnitude < 0.0001f)
+        {
+            forward = camera.transform.forward;
+        }
+
+        var rotation = Quaternion.LookRotation(forward, Vector3.up);
+        transform.SetPositionAndRotation(camera.transform.position + forward * distance, rotation);
+    }
 }

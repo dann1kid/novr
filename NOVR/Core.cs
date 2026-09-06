@@ -87,7 +87,11 @@ public class Core : MonoBehaviour
     {
         _oldAircraft = _aircraft;
         GameManager.GetLocalAircraft(out _aircraft);
-        if (_aircraft != _oldAircraft) NOVRHeadsetData.CalibrateTranslation();
+        if (_aircraft != _oldAircraft)
+        {
+            NOVRHeadsetData.CalibrateTranslation();
+            NOVRHeadsetData.CalibrateRotation();
+        }
         CameraStateManager.enableMouseLook = false;
     }
 

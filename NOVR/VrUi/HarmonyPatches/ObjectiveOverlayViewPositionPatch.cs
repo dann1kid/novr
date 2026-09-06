@@ -41,6 +41,7 @@ internal static class ObjectiveOverlayViewPositionPatch
             }
 
             var worldPosition = result.Position.ToLocalPosition();
+            var rangeMeters = Mathf.Max(result.Distance, 0.01f);
             var offScreen = VrHudProjection.PinToScreenEdge(worldPosition, out var hudPosition, out _);
             if (!offScreen && !VrHudProjection.TryProjectToCockpitHud(worldPosition, out hudPosition))
             {
@@ -49,10 +50,13 @@ internal static class ObjectiveOverlayViewPositionPatch
             }
 
             var hudRotation = cockpitHudCamera.transform.rotation;
+            var proximityScale = VrHudProjection.ProximityScale(rangeMeters);
             objectivePointer.transform.position = hudPosition;
             objectivePointer.transform.rotation = hudRotation;
+            objectivePointer.transform.localScale = Vector3.one * proximityScale;
             objectiveDot.transform.position = hudPosition;
             objectiveDot.transform.rotation = hudRotation;
+            objectiveDot.transform.localScale = Vector3.one * proximityScale;
             sizeIndicator.transform.position = hudPosition;
             sizeIndicator.transform.rotation = hudRotation;
 
@@ -91,6 +95,9 @@ internal static class ObjectiveOverlayViewPositionPatch
             objectiveInfo.text = label + " " + UnitConverter.DistanceReading(result.Distance);
             objectiveInfo.fontSize = (int)PlayerSettings.overlayTextSize;
             objectiveInfo.transform.rotation = hudRotation;
+            objectiveInfo.color = VrHudProjection.ApplyProximityTint(objectiveInfo.color, rangeMeters);
+            objectivePointer.color = VrHudProjection.ApplyProximityTint(objectivePointer.color, rangeMeters);
+            objectiveDot.color = VrHudProjection.ApplyProximityTint(objectiveDot.color, rangeMeters);
             return false;
         }
     }

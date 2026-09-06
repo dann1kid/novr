@@ -4,6 +4,13 @@ NOVR is a reworked version of [UUVR](https://github.com/Raicuparta/uuvr) designe
 
 This tree is based on the [dann1kid/novr](https://github.com/dann1kid/novr) fork of [InfernoSuperNova/novr](https://github.com/InfernoSuperNova/novr), then patched for remaining VR gaps.
 
+## 0.4.6
+
+- **Tighter HUD layout:** pitch/climb ladder is a narrow, view-cone ladder instead of a wide wraparound ring. Weapon/status plates sit closer to the boresight.
+- **HMD/radar contacts** use a smaller off-boresight ring so markers stay in central vision, and the HMD tape is attached to the headset instead of world origin.
+- **Cockpit recenter:** yaw calibration uses seated heading, recenters when you spawn, and Home / VR CENTER works in the cockpit. Look forward during the countdown.
+- **Proximity gradient:** nearer contacts and waypoints are larger, closer, and brighter; distant ones recede.
+
 ## 0.4.5
 
 - **Stereoscopic VR zoom** using the game's `Zoom View` action. Configure speed, max zoom, and instant zoom-out in Settings → Controls.

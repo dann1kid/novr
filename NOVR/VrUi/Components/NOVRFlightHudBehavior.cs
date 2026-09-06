@@ -16,8 +16,8 @@ public class NOVRFlightHudBehavior : UIRenderedCanvasBehavior
         
         if (hudcenter != null)
         {
-            MoveHmdPanelToHud("TopRightPanel", hudcenter, new Vector3(330, 290, 0f), new Vector3(0.6f, 0.6f, 0.6f));
-            MoveHmdPanelToHud("LowerLeftPanel", hudcenter, new Vector3(-400f, 80f, 0f), new Vector3(0.6f, 0.6f, 0.6f));
+            MoveHmdPanelToHud("TopRightPanel", hudcenter, new Vector3(210f, 168f, 0f), new Vector3(0.5f, 0.5f, 0.5f));
+            MoveHmdPanelToHud("LowerLeftPanel", hudcenter, new Vector3(-228f, 48f, 0f), new Vector3(0.5f, 0.5f, 0.5f));
         }
 
         var targetDesignator = FindChildStartingWith(transform, "targetDesignator");
@@ -34,7 +34,7 @@ public class NOVRFlightHudBehavior : UIRenderedCanvasBehavior
     
     private void Update()
     {
-        VrFacingUiPlacement.ApplyHudPlane(transform, 1000f);
+        VrFacingUiPlacement.ApplyCockpitStabilizedHudPlane(transform, 1000f);
     }
     
     private void MoveHmdPanelToHud(string panelName, Transform noVrHudParent, Vector3 localPosition, Vector3 localScale)
@@ -79,9 +79,9 @@ public class NOVRFlightHudBehavior : UIRenderedCanvasBehavior
     
     private static void PositionTopRightPanelChildren(Transform topRightPanel)
     {
-        SetChildLocalPosition(topRightPanel, "countermeasuresBackground", new Vector3(-750f, -55f, 0f));
-        SetChildLocalPosition(topRightPanel, "weaponPanel", new Vector3(-100f, -55f, 0f));
-        SetChildLocalPosition(topRightPanel, "PowerPanel", new Vector3(-350f, -80f, 0f));
+        SetChildLocalPosition(topRightPanel, "countermeasuresBackground", new Vector3(-420f, -36f, 0f));
+        SetChildLocalPosition(topRightPanel, "weaponPanel", new Vector3(-70f, -36f, 0f));
+        SetChildLocalPosition(topRightPanel, "PowerPanel", new Vector3(-220f, -52f, 0f));
         var powerPanel = FindChildStartingWith(topRightPanel, "PowerPanel");
         if (powerPanel == null)
             return;

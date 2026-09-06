@@ -5,10 +5,22 @@ namespace NOVR.VrUi.HarmonyPatches;
 internal static class VrHudProjection
 {
     public const float HudDistance = 1000.0f;
-    private const float VrViewportHorizontalDegrees = 50.0f;
-    private const float VrViewportVerticalDegrees = 50.0f;
-    private const float VrViewportHalfHorizontalDegrees = VrViewportHorizontalDegrees * 0.5f;
-    private const float VrViewportHalfVerticalDegrees = VrViewportVerticalDegrees * 0.5f;
+    private const float DefaultMarkerRingDegrees = 28.0f;
+    private const float NearContactMeters = 250.0f;
+    private const float FarContactMeters = 12000.0f;
+    private const float NearHudDistance = 220.0f;
+
+    private static float MarkerRingDegrees
+    {
+        get
+        {
+            var configured = global::NOVR.ModConfiguration.Instance?.HudMarkerRingDegrees.Value ?? DefaultMarkerRingDegrees;
+            return Mathf.Clamp(configured, 16.0f, 50.0f);
+        }
+    }
+
+    private static float HalfHorizontalDegrees => MarkerRingDegrees * 0.5f;
+    private static float HalfVerticalDegrees => MarkerRingDegrees * 0.46f;
 
     public static bool TryProjectToCockpitHud(Vector3 worldPosition, out Vector3 hudPosition)
     {
@@ -22,7 +34,11 @@ internal static class VrHudProjection
         if (mainCameraLocal.z <= 0.0f)
             return false;
 
-        hudPosition = cockpitHudCamera.transform.TransformPoint(mainCameraLocal).normalized * HudDistance;
+        var rangeMeters = mainCameraLocal.magnitude;
+        var worldDirection = cockpitHudCamera.transform.TransformPoint(mainCameraLocal) - cockpitHudCamera.transform.position;
+        if (worldDirection.sqrMagnitude <= Mathf.Epsilon)
+            return false;
+        hudPosition = cockpitHudCamera.transform.position + worldDirection.normalized * ProximityHudDistance(rangeMeters);
         return true;
     }
 
@@ -38,7 +54,11 @@ internal static class VrHudProjection
         if (mainCameraLocal.sqrMagnitude <= Mathf.Epsilon)
             return false;
 
-        hudPosition = cockpitHudCamera.transform.TransformPoint(mainCameraLocal).normalized * HudDistance;
+        var rangeMeters = (worldPosition - mainCamera.transform.position).magnitude;
+        var worldDirection = cockpitHudCamera.transform.TransformPoint(mainCameraLocal) - cockpitHudCamera.transform.position;
+        if (worldDirection.sqrMagnitude <= Mathf.Epsilon)
+            return false;
+        hudPosition = cockpitHudCamera.transform.position + worldDirection.normalized * ProximityHudDistance(rangeMeters);
         return true;
     }
 
@@ -54,7 +74,7 @@ internal static class VrHudProjection
         var directionToTarget = worldPosition - mainCamera.transform.position;
         if (directionToTarget.sqrMagnitude <= Mathf.Epsilon)
         {
-            hudPosition = cockpitHudCamera.transform.forward * HudDistance;
+            hudPosition = cockpitHudCamera.transform.position + cockpitHudCamera.transform.forward * HudDistance;
             return false;
         }
 
@@ -64,8 +84,8 @@ internal static class VrHudProjection
             mainCameraLocalDirection.y,
             new Vector2(mainCameraLocalDirection.x, mainCameraLocalDirection.z).magnitude) * Mathf.Rad2Deg;
 
-        var horizontalRatio = targetYawDegrees / VrViewportHalfHorizontalDegrees;
-        var verticalRatio = targetPitchDegrees / VrViewportHalfVerticalDegrees;
+        var horizontalRatio = targetYawDegrees / HalfHorizontalDegrees;
+        var verticalRatio = targetPitchDegrees / HalfVerticalDegrees;
         var ellipseDistance = Mathf.Sqrt(horizontalRatio * horizontalRatio + verticalRatio * verticalRatio);
         var screenEdge = mainCameraLocalDirection.z <= 0.0f || ellipseDistance > 1.0f;
 
@@ -78,9 +98,29 @@ internal static class VrHudProjection
         }
 
         var pinnedLocalDirection = DirectionFromYawPitch(pinnedYawDegrees, pinnedPitchDegrees);
-        hudPosition = cockpitHudCamera.transform.TransformDirection(pinnedLocalDirection).normalized * HudDistance;
+        var rangeMeters = directionToTarget.magnitude;
+        hudPosition = cockpitHudCamera.transform.position + cockpitHudCamera.transform.TransformDirection(pinnedLocalDirection).normalized * ProximityHudDistance(rangeMeters);
         arrowAngle = Mathf.Atan2(targetPitchDegrees, targetYawDegrees);
         return screenEdge;
+    }
+
+    public static float ProximityHudDistance(float rangeMeters)
+    {
+        var t = Mathf.InverseLerp(NearContactMeters, FarContactMeters, Mathf.Max(0.0f, rangeMeters));
+        return Mathf.Lerp(NearHudDistance, HudDistance, t);
+    }
+
+    public static float ProximityScale(float rangeMeters)
+    {
+        var t = Mathf.InverseLerp(NearContactMeters, FarContactMeters, Mathf.Max(0.0f, rangeMeters));
+        return Mathf.Lerp(1.42f, 0.68f, t);
+    }
+
+    public static Color ApplyProximityTint(Color color, float rangeMeters)
+    {
+        var nearness = 1.0f - Mathf.InverseLerp(NearContactMeters, FarContactMeters, Mathf.Max(0.0f, rangeMeters));
+        var faded = new Color(color.r * 0.72f, color.g * 0.76f, color.b * 0.88f, color.a * 0.48f);
+        return Color.Lerp(faded, color, nearness);
     }
 
     public static bool PinToScreenEdge(Vector3 worldPosition, out Vector3 hudPosition) =>

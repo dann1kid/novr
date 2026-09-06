@@ -183,9 +183,9 @@ public class NativeVrUiRoot : NOVRBehaviour
 
         var shouldShowNativeUi = shouldShowMainMenu || shouldShowSinglePlayerMissionPicker || shouldShowMultiplayer || shouldShowSettings || shouldShowWorkshop || shouldShowVrUiSettings ||
                                  (_customizeMissionPanel != null && _customizeMissionPanel.IsVisible);
-        HandleRecenterShortcut(shouldShowNativeUi);
+        HandleRecenterShortcut();
         UpdatePlacement(shouldShowNativeUi);
-        UpdatePendingRecenter(shouldShowNativeUi);
+        UpdatePendingRecenter();
         if (_root != null && _root.activeSelf != shouldShowNativeUi)
         {
             _root.SetActive(shouldShowNativeUi);
@@ -352,10 +352,8 @@ public class NativeVrUiRoot : NOVRBehaviour
         VrUiCursor.I?.ClearProjectionReferenceRotation();
     }
 
-    private void HandleRecenterShortcut(bool shouldShowNativeUi)
+    private void HandleRecenterShortcut()
     {
-        if (!shouldShowNativeUi) return;
-
         var keyboard = Keyboard.current;
         if (keyboard?.homeKey.wasPressedThisFrame == true)
         {
@@ -382,17 +380,10 @@ public class NativeVrUiRoot : NOVRBehaviour
         Debug.Log("[NOVR] Native VR UI recentered.");
     }
 
-    private void UpdatePendingRecenter(bool shouldShowNativeUi)
+    private void UpdatePendingRecenter()
     {
         if (!_recenterPending)
         {
-            UpdateRecenterButtonText();
-            return;
-        }
-
-        if (!shouldShowNativeUi)
-        {
-            _recenterPending = false;
             UpdateRecenterButtonText();
             return;
         }
@@ -423,7 +414,7 @@ public class NativeVrUiRoot : NOVRBehaviour
         }
 
         var remaining = Mathf.Max(0f, _pendingRecenterTime - Time.unscaledTime);
-        _recenterButtonText.text = $"CENTER {remaining:0.0}";
+        _recenterButtonText.text = $"LOOK FWD {remaining:0.0}";
     }
 
     private void CreateRecenterWidget()

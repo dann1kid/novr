@@ -52,6 +52,7 @@ internal static class HUDUnitMarkerViewPositionPatch
                 return false;
 
             var knownWorldPosition = knownPosition.ToLocalPosition();
+            var rangeMeters = (knownWorldPosition - mainCamera.transform.position).magnitude;
             if (__instance.selected)
             {
                 if (VrHudProjection.PinToScreenEdge(knownWorldPosition, out var rayToScreen, out _))
@@ -66,6 +67,7 @@ internal static class HUDUnitMarkerViewPositionPatch
                     __instance.image.enabled = true;
                     if (VrHudProjection.TryProjectToCockpitHud(knownWorldPosition, out var targetHudPosition))
                         markerTransform.position = targetHudPosition;
+                    ApplyProximityCue(__instance, rangeMeters);
                     SetTargetArrow(SceneSingleton<CombatHUD>.i, false, Vector3.zero, Vector3.zero, Vector3.zero,
                         cockpitHudCamera);
                 }
@@ -100,6 +102,7 @@ internal static class HUDUnitMarkerViewPositionPatch
                     __instance.image.enabled = true;
                 if (VrHudProjection.TryProjectToCockpitHud(knownWorldPosition, out var targetHudPosition))
                     markerTransform.position = targetHudPosition;
+                ApplyProximityCue(__instance, rangeMeters);
 
                 if (__instance.fresh)
                 {
@@ -111,17 +114,30 @@ internal static class HUDUnitMarkerViewPositionPatch
                         __instance.fresh = false;
                 }
 
-                if (!GetFlashing(__instance))
-                    return false;
-                var flashingColor = GetColor(__instance);
-                var flashingWarningColor = ThemeManager.Active.ColorTheme.Warning;
-                __instance.image.color = Color.Lerp(
-                    flashingColor + flashingWarningColor,
-                    flashingColor,
-                    Mathf.Sin(Time.timeSinceLevelLoad * 20f) + 0.5f);
+                if (GetFlashing(__instance))
+                {
+                    var flashingColor = GetColor(__instance);
+                    var flashingWarningColor = ThemeManager.Active.ColorTheme.Warning;
+                    __instance.image.color = Color.Lerp(
+                        flashingColor + flashingWarningColor,
+                        flashingColor,
+                        Mathf.Sin(Time.timeSinceLevelLoad * 20f) + 0.5f);
+                }
+                else if (!__instance.fresh)
+                {
+                    __instance.image.color = GetColor(__instance);
+                }
+
+                __instance.image.color = VrHudProjection.ApplyProximityTint(__instance.image.color, rangeMeters);
             }
 
             return false;
+        }
+
+        private static void ApplyProximityCue(global::HUDUnitMarker marker, float rangeMeters)
+        {
+            if (marker.image == null) return;
+            marker.image.transform.localScale = Vector3.one * VrHudProjection.ProximityScale(rangeMeters);
         }
 
 
