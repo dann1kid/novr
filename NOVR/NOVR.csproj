@@ -29,7 +29,7 @@
         <MSBuild Projects="$(MSBuildThisFileDirectory)../tools/stubs/BuildStubs.proj" Targets="Build" Properties="Configuration=Release" />
     </Target>
     <Target Name="WritePluginVersionFile" AfterTargets="Build">
-        <WriteLinesToFile File="$(TargetDir)version.txt" Lines="0.4.9" Overwrite="true" Encoding="UTF-8" />
+        <WriteLinesToFile File="$(TargetDir)version.txt" Lines="0.4.10" Overwrite="true" Encoding="UTF-8" />
     </Target>
     <ItemGroup Condition="'$(RestoreBepInExFromNuget)' == 'true'">
         <PackageReference Include="BepInEx.Core" Version="5.4.16" />

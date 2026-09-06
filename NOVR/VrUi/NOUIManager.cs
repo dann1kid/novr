@@ -84,8 +84,8 @@ public class NOUIManager : NOVRBehaviour
         // hid the VR cursor and native menus in the HMD while the 3D globe still drew.
         camera.stereoTargetEye = StereoTargetEyeMask.Both;
         camera.targetTexture = null;
-        camera.clearFlags = CameraClearFlags.Depth;
-        camera.backgroundColor = Color.clear;
+        camera.clearFlags = CameraClearFlags.Nothing;
+        camera.backgroundColor = new Color(0f, 0f, 0f, 0f);
         camera.depth = depth;
         camera.allowHDR = false;
         camera.allowMSAA = false;
@@ -118,11 +118,17 @@ public class NOUIManager : NOVRBehaviour
     private static void ConfigureUiCamera(Camera camera)
     {
         camera.stereoTargetEye = StereoTargetEyeMask.Both;
-        camera.clearFlags = CameraClearFlags.Depth;
-        camera.backgroundColor = Color.clear;
+        camera.clearFlags = CameraClearFlags.Nothing;
+        camera.backgroundColor = new Color(0f, 0f, 0f, 0f);
         camera.targetTexture = null;
-        camera.nearClipPlane = 0.01f;
+        camera.nearClipPlane = 0.05f;
         camera.farClipPlane = 10000f;
         camera.rect = new Rect(0f, 0f, 1f, 1f);
+
+        var additional = camera.GetComponent<UniversalAdditionalCameraData>();
+        if (additional != null)
+        {
+            additional.renderType = CameraRenderType.Overlay;
+        }
     }
 }

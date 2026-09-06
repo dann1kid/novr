@@ -1,11 +1,11 @@
-# NOVR 0.4.9
+# NOVR 0.4.10
 
-Close the game, then extract `NOVR-0.4.9.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.9`.
+Close the game, then extract `NOVR-0.4.10.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.10`.
 
-## Menu cursor and center occlusion
+## Black square in the headset
 
-0.4.8 stopped the VR UI camera from drawing in the headset to avoid a black view. That also hid the VR cursor and native menus, so the 3D globe stayed visible but you could not click Start. The green cursor ring could also sit on the near clip plane and look like a sphere covering the middle of the view.
+0.4.9 put the VR menus back, but the game's `BlackoutCanvas` was still a full-screen black UI panel converted to world space. That panel sat in the camera frustum and looked like a black square cutting across the view.
 
-0.4.9 restores the 0.4.3 overlay camera (stereo Both in the URP stack). The zoom hook from 0.4.8 stays off. The VR cursor stays visible while OpenXR is running even if the hardware cursor is hidden, and it is kept at least 1 m from the headset. The fade canvas only sticks to the HMD while it is actually fading.
+0.4.10 keeps that canvas disabled in VR. Scene fades use a separate quad that only appears while a fade is actually running. The VR UI overlay camera also stops clearing to a black depth buffer.
 
 Stereoscopic Zoom View is still temporarily off. HUD layout from 0.4.6 is unchanged.

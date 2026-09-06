@@ -142,6 +142,12 @@ public class UIBehaviorPatcher : NOVRBehaviour
         var wasActive = go.activeInHierarchy;
         go.AddComponent(toAdd);
 
+        // Re-enabling BlackoutCanvas for a bounce leaves a full-screen black quad in VR.
+        if (toAdd == typeof(NOVRBlackoutCanvasBehavior))
+        {
+            return;
+        }
+
         if (!wasActive) return;
         
         Debug.Log($"UIBehaviorPatcher: Deactivating {go.name} for one frame to force lifecycle callbacks");
