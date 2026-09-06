@@ -1,10 +1,12 @@
-# NOVR 0.4.6
+## 0.4.7
 
-Extract `NOVR.zip` into `Nuclear Option/BepInEx` (not the game root). Close the game first.
+Close the game, then extract `NOVR-0.4.7.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.7`.
 
-After install, `BepInEx/plugins/NOVR/version.txt` should read `0.4.6`.
+## VR entry fix
 
-## Changes
+0.4.6 could fail to start OpenXR: one missing Harmony target aborted the whole plugin before VR toggled on, and a failed OpenXR init threw instead of retrying. 0.4.7 skips bad patches, retries OpenXR if the headset was asleep, and no longer recenters yaw when tracking is first acquired.
+
+## HUD (from 0.4.6)
 
 - Tighter HUD: the pitch/climb ladder is a narrow view-cone scale instead of a wide wraparound ring. Weapon and status plates sit closer to the boresight.
 - HMD/radar contacts use a smaller off-boresight ring so markers stay in central vision. The HMD tape is attached to the headset, not world origin.

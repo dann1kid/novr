@@ -44,26 +44,29 @@ public class Core : MonoBehaviour
 
     private void Start()
     {
-        
-        
-        var xrDeviceType = Type.GetType("UnityEngine.XR.XRDevice, UnityEngine.XRModule") ??
-                           Type.GetType("UnityEngine.XR.XRDevice, UnityEngine.VRModule") ??
-                           Type.GetType("UnityEngine.VR.VRDevice, UnityEngine.VRModule") ??
-                           Type.GetType("UnityEngine.VR.VRDevice, UnityEngine");
+        try
+        {
+            var xrDeviceType = Type.GetType("UnityEngine.XR.XRDevice, UnityEngine.XRModule") ??
+                               Type.GetType("UnityEngine.XR.XRDevice, UnityEngine.VRModule") ??
+                               Type.GetType("UnityEngine.VR.VRDevice, UnityEngine.VRModule") ??
+                               Type.GetType("UnityEngine.VR.VRDevice, UnityEngine");
 
-        _refreshRateProperty = xrDeviceType?.GetProperty("refreshRate");
-        
-        _headsetData = NOVRBehaviour.Create<NOVRHeadsetData>(transform);
-        _vrUi = NOVRBehaviour.Create<NOUIManager>(transform);
-        
-        _vrTogglerManager = new VrTogglerManager();
-        
+            _refreshRateProperty = xrDeviceType?.GetProperty("refreshRate");
+
+            _headsetData = NOVRBehaviour.Create<NOVRHeadsetData>(transform);
+            _vrUi = NOVRBehaviour.Create<NOUIManager>(transform);
+
+            _vrTogglerManager = new VrTogglerManager();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("[NOVR] Core.Start failed (VR will keep retrying): " + ex);
+        }
     }
-
-
 
     private void Update()
     {
+        _vrTogglerManager?.EnsureVrEnabled();
         UpdatePhysicsRate();
     }
 

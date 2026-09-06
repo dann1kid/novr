@@ -17,6 +17,10 @@ public abstract class VrToggler
         if (!_isSetUp)
         {
             _isSetUp = SetUp();
+            if (!_isSetUp)
+            {
+                return;
+            }
         }
 
         if (nextVrEnabled)

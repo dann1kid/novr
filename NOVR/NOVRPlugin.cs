@@ -1,11 +1,10 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Reflection;
 using BepInEx;
 using HarmonyLib;
 using NOVR.VrCamera;
-using NOVR.VrUi;
-using NOVR.VrUi.SpecialBehavior;
-using UnityEngine.SceneManagement;
+using UnityEngine;
 using UnityEngine.XR;
 
 #if CPP
@@ -18,7 +17,7 @@ namespace NOVR;
 [BepInPlugin(
     "deltawing.novr",
     "NOVR",
-    "0.4.6")]
+    "0.4.7")]
 public class NOVRPlugin : BaseUnityPlugin
 {
     
@@ -27,22 +26,45 @@ public class NOVRPlugin : BaseUnityPlugin
 
     public NOVRPlugin()
     {
-        
-        InputTracking.trackingAcquired += TrackingAcquired;
         _instance = this;
         ModFolderPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(NOVRPlugin)).Location);
-        
-        new ModConfiguration(Config);
-        var harmony = new Harmony("deltawing.novr");
-        harmony.PatchAll(Assembly.GetExecutingAssembly());
-        XRPassZoomPatch.TryApply(harmony);
-        Core.Create();
+
+        try
+        {
+            InputTracking.trackingAcquired += TrackingAcquired;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("[NOVR] Could not subscribe to trackingAcquired: " + ex);
+        }
+
+        try
+        {
+            new ModConfiguration(Config);
+            var harmony = HarmonyPatchApplier.Apply(Assembly.GetExecutingAssembly());
+            CameraCockpitStatePatch.TryApply(harmony);
+            XRPassZoomPatch.TryApply(harmony);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("[NOVR] Plugin setup error: " + ex);
+        }
+
+        try
+        {
+            Core.Create();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("[NOVR] Core.Create failed: " + ex);
+        }
     }
 
     private void TrackingAcquired(XRNodeState obj)
     {
+        // Match 0.4.4: only seat height/position when tracking appears.
+        // Yaw recenter on this event used a default pose and made VR feel like it never started.
         NOVRHeadsetData.CalibrateTranslation();
-        NOVRHeadsetData.CalibrateRotation();
     }
      
     private void Awake()

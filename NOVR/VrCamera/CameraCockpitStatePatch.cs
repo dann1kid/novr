@@ -28,23 +28,28 @@ public class CameraCockpitStatePatch
         }
     }
 
-    [HarmonyPatch(typeof(CameraCockpitState), "EnterState")]
-    private static class EnterStatePatch
+    // Optional: 0.4.4 games may not have these method names. Applied from TryApply so a miss
+    // cannot abort the rest of Harmony patching (which would leave VR disabled).
+    private static void ResetZoomPostfix()
     {
-        [HarmonyPostfix]
-        private static void Postfix()
-        {
-            VrZoomController.ResetZoom();
-        }
+        VrZoomController.ResetZoom();
     }
 
-    [HarmonyPatch(typeof(CameraCockpitState), "LeaveState")]
-    private static class LeaveStatePatch
+    internal static void TryApply(Harmony harmony)
     {
-        [HarmonyPostfix]
-        private static void Postfix()
+        TryPatch(harmony, "EnterState");
+        TryPatch(harmony, "LeaveState");
+    }
+
+    private static void TryPatch(Harmony harmony, string methodName)
+    {
+        var method = AccessTools.Method(typeof(CameraCockpitState), methodName);
+        if (method == null)
         {
-            VrZoomController.ResetZoom();
+            Debug.Log($"[NOVR] CameraCockpitState.{methodName} not found; zoom will reset from UpdateState only.");
+            return;
         }
+
+        harmony.Patch(method, postfix: new HarmonyMethod(typeof(CameraCockpitStatePatch), nameof(ResetZoomPostfix)));
     }
 }
