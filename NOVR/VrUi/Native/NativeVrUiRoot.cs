@@ -280,7 +280,7 @@ public class NativeVrUiRoot : NOVRBehaviour
 
         if (_canvas != null)
         {
-            _canvas.worldCamera = APIBus.CockpitHudCamera;
+            _canvas.worldCamera = APIBus.HeadsetCamera ?? APIBus.CockpitHudCamera;
             _canvas.planeDistance = menuDistance;
         }
 
@@ -348,12 +348,13 @@ public class NativeVrUiRoot : NOVRBehaviour
 
     private void KeepNativeMenuOffTheHeadset(float menuDistance, float menuHeightOffset)
     {
-        if (_root == null || APIBus.CockpitHudCamera == null)
+        var headset = APIBus.HeadsetCamera ?? APIBus.CockpitHudCamera;
+        if (_root == null || headset == null)
         {
             return;
         }
 
-        var hud = APIBus.CockpitHudCamera.transform;
+        var hud = headset.transform;
         var toMenu = _root.transform.position - hud.position;
         var planeDistance = Mathf.Abs(Vector3.Dot(toMenu, _root.transform.forward));
         if (planeDistance >= 0.45f && toMenu.magnitude >= 0.45f)
@@ -490,7 +491,7 @@ public class NativeVrUiRoot : NOVRBehaviour
 
         if (_recenterWidgetCanvas != null)
         {
-            _recenterWidgetCanvas.worldCamera = APIBus.CockpitHudCamera;
+            _recenterWidgetCanvas.worldCamera = APIBus.HeadsetCamera ?? APIBus.CockpitHudCamera;
         }
     }
 

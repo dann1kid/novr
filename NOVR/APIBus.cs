@@ -10,6 +10,23 @@ public class APIBus : MonoBehaviour
     public static Camera MainCamera => _previousMainCamera;
     public static Camera CockpitHudCamera => NOUIManager.I.CockpitHudCamera;
     public static GameObject CockpitHudReference => NOUIManager.I.CockpitHudReference;
+
+    /// <summary>
+    /// Camera that actually submits the HMD view. Prefer this for canvas.worldCamera
+    /// and cursor projection so a disabled HUD overlay cannot steal XR.
+    /// </summary>
+    public static Camera? HeadsetCamera
+    {
+        get
+        {
+            if (_previousMainCamera != null)
+            {
+                return _previousMainCamera;
+            }
+
+            return Camera.main;
+        }
+    }
     public static double AngleFromZero;
     //public static Vector3 TrackingCalibrationOffset => NOVRPoseDriver.TranslationCalibrationOffset;
     #endregion

@@ -11,7 +11,6 @@ public class NativeSinglePlayerMissionPanel : MonoBehaviour
 {
     private const int PageSize = 13;
 
-    private static readonly Color BackgroundColor = new(0.025f, 0.035f, 0.045f, 0.92f);
     private static readonly Color PanelColor = new(0.05f, 0.06f, 0.065f, 0.94f);
     private static readonly Color ButtonColor = new(0.24f, 0.29f, 0.31f, 0.96f);
     private static readonly Color ButtonSelectedColor = new(0.44f, 0.49f, 0.50f, 1f);
@@ -69,7 +68,6 @@ public class NativeSinglePlayerMissionPanel : MonoBehaviour
     private void BuildLayout(RectTransform root)
     {
         _container = CreateContainer("Native Single Player Missions", root, root.sizeDelta);
-        CreateImage("Background", _container, BackgroundColor, Vector2.zero, Vector2.zero);
         CreateText("Header", _container, "SINGLE PLAYER MISSIONS", new Vector2(0f, NativeUiLayout.HeaderY), NativeUiLayout.HeaderSize, 22, TextAnchor.MiddleCenter, Color.white);
 
         var listPanel = CreatePanel("Mission List Panel", _container, PanelColor, new Vector2(-480f, -15f), new Vector2(820f, 950f));

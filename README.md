@@ -4,6 +4,10 @@ NOVR is a reworked version of [UUVR](https://github.com/Raicuparta/uuvr) designe
 
 This tree is based on the [dann1kid/novr](https://github.com/dann1kid/novr) fork of [InfernoSuperNova/novr](https://github.com/InfernoSuperNova/novr), then patched for remaining VR gaps.
 
+## 0.4.14
+
+- **Black screen and clipping plane:** the VR UI overlay camera is disabled and kept off the XR stack. Full-screen menu backgrounds are gone. Leftover world-space canvases that the headset could walk through are parked. Fade only covers the view during a real scene fade.
+
 ## 0.4.13
 
 - **Black screen fix:** the VR UI overlay no longer submits a second headset view. Menus and the cursor are drawn by the game camera. Full-screen native menu backgrounds that clipped the HMD are gone.

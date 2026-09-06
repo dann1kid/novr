@@ -7,7 +7,6 @@ namespace NOVR.VrUi.Native;
 
 public class NativeCustomizeMissionPanel : MonoBehaviour
 {
-    private static readonly Color BackgroundColor = new(0.025f, 0.035f, 0.045f, 0.96f);
     private static readonly Color PanelColor = new(0.05f, 0.06f, 0.065f, 0.96f);
     private static readonly Color ButtonColor = new(0.24f, 0.29f, 0.31f, 0.96f);
     private static readonly Color BackButtonColor = new(0.62f, 0.12f, 0.14f, 0.96f);
@@ -54,7 +53,6 @@ public class NativeCustomizeMissionPanel : MonoBehaviour
     private void BuildLayout(RectTransform root)
     {
         _container = CreateContainer("Native Customize Mission", root, root.sizeDelta);
-        CreateImage("Background", _container, BackgroundColor, Vector2.zero, Vector2.zero);
         _titleText = CreateText("Header", _container, "CUSTOMIZE MISSION", new Vector2(0f, NativeUiLayout.HeaderY), NativeUiLayout.HeaderSize, 22, TextAnchor.MiddleCenter, Color.white);
 
         var panel = CreatePanel("Settings Panel", _container, PanelColor, new Vector2(0f, -15f), new Vector2(1100f, 950f));

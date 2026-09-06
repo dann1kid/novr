@@ -91,7 +91,18 @@ public class VrCameraManager: MonoBehaviour
         var rootUniversalAdditionalCameraData = rootCamera.GetComponent<UniversalAdditionalCameraData>();
         
         if (universalAdditionalCameraData != null && rootUniversalAdditionalCameraData != null)
-            universalAdditionalCameraData.cameraStack.AddRange(rootUniversalAdditionalCameraData.cameraStack);
+        {
+            var stack = universalAdditionalCameraData.cameraStack;
+            stack.AddRange(rootUniversalAdditionalCameraData.cameraStack);
+            for (var i = stack.Count - 1; i >= 0; i--)
+            {
+                var overlay = stack[i];
+                if (overlay == null || overlay.name == "VrCockpitHudCamera")
+                {
+                    stack.RemoveAt(i);
+                }
+            }
+        }
         
         
         var rootAudioListener = rootCamera.GetComponent<AudioListener>();

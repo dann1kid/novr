@@ -6,15 +6,14 @@ namespace NOVR.VrUi.SpecialBehavior;
 
 public class NOVRBlackoutCanvasBehavior : MonoBehaviour
 {
-    private const float FadeQuadDistanceMeters = 1.6f;
-    private const float FadeQuadSizeMeters = 8f;
+    private const float FadeQuadDistanceMeters = 0.35f;
+    private const float FadeQuadSizeMeters = 2.4f;
     private const float FadeAlphaThreshold = 0.02f;
 
     private Canvas? _sourceCanvas;
     private CanvasGroup? _canvasGroup;
     private GraphicRaycaster? _sourceRaycaster;
     private Graphic[] _sourceGraphics = Array.Empty<Graphic>();
-    private bool _startedInactive;
     private GameObject? _fadeRoot;
     private RawImage? _fadeImage;
 
@@ -26,17 +25,14 @@ public class NOVRBlackoutCanvasBehavior : MonoBehaviour
             throw new Exception($"{typeof(NOVRBlackoutCanvasBehavior)} attached to {gameObject.name} without {typeof(Canvas)} component.");
         }
 
-        _startedInactive = !gameObject.activeInHierarchy;
         _canvasGroup = gameObject.GetComponent<CanvasGroup>();
         _sourceRaycaster = gameObject.GetComponent<GraphicRaycaster>();
         _sourceGraphics = GetComponentsInChildren<Graphic>(true);
 
-        // The game's fade canvas is a full-screen overlay. In world space that becomes a
-        // huge black quad that clips the HMD. Keep the original canvas disabled and draw a
-        // dedicated VR fade only while the game is actually fading.
+        // The game's fade canvas is a full-screen overlay. In world space that
+        // becomes a huge black quad that clips the HMD. Keep it disabled.
         HideSourceCanvas();
-        CreateFadeQuad();
-        Debug.Log("[NOVR] BlackoutCanvas is hidden in VR; a headset fade quad is used only during fades.");
+        Debug.Log("[NOVR] BlackoutCanvas is hidden in VR; a headset fade is used only during CanvasGroup fades.");
     }
 
     private void OnEnable()
@@ -67,9 +63,9 @@ public class NOVRBlackoutCanvasBehavior : MonoBehaviour
 
     private void RefreshFade()
     {
-        var hud = APIBus.CockpitHudCamera;
+        var headset = APIBus.HeadsetCamera ?? APIBus.CockpitHudCamera;
         var alpha = ReadFadeAlpha();
-        if (hud == null || alpha <= FadeAlphaThreshold)
+        if (headset == null || alpha <= FadeAlphaThreshold)
         {
             SetFadeVisible(false);
             return;
@@ -82,10 +78,10 @@ public class NOVRBlackoutCanvasBehavior : MonoBehaviour
         }
 
         _fadeRoot.SetActive(true);
-        _fadeRoot.transform.SetParent(hud.transform, false);
+        _fadeRoot.transform.SetParent(headset.transform, false);
         _fadeRoot.transform.localPosition = new Vector3(0f, 0f, FadeQuadDistanceMeters);
         _fadeRoot.transform.localRotation = Quaternion.identity;
-        _fadeRoot.transform.localScale = Vector3.one;
+        _fadeRoot.transform.localScale = Vector3.one * 0.001f;
         _fadeImage.color = new Color(0f, 0f, 0f, alpha);
     }
 
@@ -96,13 +92,9 @@ public class NOVRBlackoutCanvasBehavior : MonoBehaviour
             return 0f;
         }
 
-        if (_canvasGroup != null)
-        {
-            return _canvasGroup.alpha;
-        }
-
-        // Always-on menu leftovers stay hidden. A canvas that starts disabled is a real fade.
-        return _startedInactive ? 1f : 0f;
+        // Only a live CanvasGroup fade should cover the HMD. A leftover
+        // BlackoutCanvas with no group used to force alpha 1 and spawn an 8 m wall.
+        return _canvasGroup != null ? _canvasGroup.alpha : 0f;
     }
 
     private void HideSourceCanvas()
@@ -125,6 +117,8 @@ public class NOVRBlackoutCanvasBehavior : MonoBehaviour
                 graphic.enabled = false;
             }
         }
+
+        transform.position = new Vector3(0f, -10000f, 0f);
     }
 
     private void SetFadeVisible(bool visible)
@@ -142,16 +136,6 @@ public class NOVRBlackoutCanvasBehavior : MonoBehaviour
             return;
         }
 
-        CreateFadeQuad();
-    }
-
-    private void CreateFadeQuad()
-    {
-        if (_fadeRoot != null)
-        {
-            return;
-        }
-
         _fadeRoot = new GameObject("NOVR_VrFadeQuad");
         DontDestroyOnLoad(_fadeRoot);
 
@@ -163,10 +147,8 @@ public class NOVRBlackoutCanvasBehavior : MonoBehaviour
         canvas.renderMode = RenderMode.WorldSpace;
         canvas.overrideSorting = true;
         canvas.sortingOrder = short.MaxValue - 10;
-        canvas.worldCamera = APIBus.CockpitHudCamera;
+        canvas.worldCamera = APIBus.HeadsetCamera ?? APIBus.CockpitHudCamera;
         canvas.planeDistance = FadeQuadDistanceMeters;
-
-        _fadeRoot.transform.localScale = Vector3.one * 0.001f;
 
         var texture = new Texture2D(1, 1, TextureFormat.RGBA32, false)
         {

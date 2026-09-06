@@ -21,7 +21,6 @@ public class NativeSettingsPanel : MonoBehaviour
     private const float BindingCaptureDelaySeconds = 0.25f;
     private const float BindingCaptureTimeoutSeconds = 8f;
 
-    private static readonly Color BackgroundColor = new(0.025f, 0.035f, 0.045f, 0.93f);
     private static readonly Color PanelColor = new(0.05f, 0.06f, 0.065f, 0.94f);
     private static readonly Color ButtonColor = new(0.24f, 0.29f, 0.31f, 0.96f);
     private static readonly Color ButtonSelectedColor = new(0.44f, 0.49f, 0.50f, 1f);
@@ -106,7 +105,6 @@ public class NativeSettingsPanel : MonoBehaviour
     private void BuildLayout(RectTransform root)
     {
         _container = CreateContainer("Native Settings", root, root.sizeDelta);
-        CreateImage("Background", _container, BackgroundColor, Vector2.zero, Vector2.zero);
         CreateText("Header", _container, "SETTINGS", new Vector2(0f, NativeUiLayout.HeaderY), NativeUiLayout.HeaderSize, 22, TextAnchor.MiddleCenter, Color.white);
 
         var tabPanel = CreatePanel("Settings Tabs", _container, PanelColor, new Vector2(-770f, -15f), new Vector2(280f, 950f));

@@ -16,7 +16,6 @@ public sealed class NativeVrUiSettingsPanel : MonoBehaviour
     private const float MinHeightOffset = -0.25f;
     private const float MaxHeightOffset = 1.0f;
 
-    private static readonly Color BackgroundColor = new(0.025f, 0.035f, 0.045f, 0.93f);
     private static readonly Color PanelColor = new(0.05f, 0.06f, 0.065f, 0.94f);
     private static readonly Color ButtonColor = new(0.24f, 0.29f, 0.31f, 0.96f);
     private static readonly Color BackButtonColor = new(0.62f, 0.12f, 0.14f, 0.96f);
@@ -58,7 +57,6 @@ public sealed class NativeVrUiSettingsPanel : MonoBehaviour
     private void BuildLayout(RectTransform root)
     {
         _container = CreateContainer("Native VR UI Settings", root, root.sizeDelta);
-        CreateImage("Background", _container, BackgroundColor, Vector2.zero, Vector2.zero);
         CreateText("Header", _container, "VR UI SETTINGS", new Vector2(0f, NativeUiLayout.HeaderY), NativeUiLayout.HeaderSize, 22, TextAnchor.MiddleCenter, Color.white);
 
         var panel = CreatePanel("VR UI Settings Panel", _container, PanelColor, Vector2.zero, new Vector2(980f, 720f));

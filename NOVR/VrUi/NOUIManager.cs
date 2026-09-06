@@ -61,18 +61,20 @@ public class NOUIManager : NOVRBehaviour
         ConfigureUiCameras();
         UpdateSmoothedPosition();
         IncludeVrUiOnHeadsetCamera();
+        DetachHudOverlayFromXrStacks();
     }
 
     private void LateUpdate()
     {
         IncludeVrUiOnHeadsetCamera();
-        WorldSpaceCanvasClipGuard.Apply(CockpitHudCamera);
+        DetachHudOverlayFromXrStacks();
+        WorldSpaceCanvasClipGuard.Apply(APIBus.HeadsetCamera ?? CockpitHudCamera);
     }
     
     private void UpdateSmoothedPosition()
     {
         var smoothedForwardReference = CockpitHudReference;
-        var cam = CockpitHudCamera;
+        var cam = APIBus.HeadsetCamera ?? CockpitHudCamera;
         smoothedForwardReference.transform.position = cam.transform.position;
         smoothedForwardReference.transform.localRotation = Quaternion.Lerp(smoothedForwardReference.transform.localRotation, cam.transform.localRotation, Mathf.Clamp(Time.deltaTime * SmoothingFactor, 0, 1));
     }
@@ -87,8 +89,9 @@ public class NOUIManager : NOVRBehaviour
         var additionalCameraData = host.AddComponent<UniversalAdditionalCameraData>();
         VrCameraManager.IgnoredCameras.Add(camera);
 
-        // Do not submit a second XR view. 0.4.9–0.4.12 used stereo Both and the
-        // overlay replaced the game with black. VR UI is drawn by the headset camera.
+        // Pose slave only. An enabled overlay with stereo Both replaced the HMD
+        // with black (0.4.9–0.4.12). stereo None still got picked up on some XR
+        // paths, so this camera stays disabled and off every URP stack.
         camera.stereoTargetEye = StereoTargetEyeMask.None;
         additionalCameraData.allowXRRendering = false;
         additionalCameraData.renderType = CameraRenderType.Overlay;
@@ -99,7 +102,7 @@ public class NOUIManager : NOVRBehaviour
         camera.allowHDR = false;
         camera.allowMSAA = false;
         camera.cullingMask = 1 << (int)LayerHelper.GetVrUiLayer();
-        camera.enabled = true;
+        camera.enabled = false;
 
         return camera;
     }
@@ -107,11 +110,12 @@ public class NOUIManager : NOVRBehaviour
     private void OnMainCameraChanged(Camera? previous, Camera? newCam)
     {
         IncludeVrUiOnHeadsetCamera(newCam);
+        DetachHudOverlayFromXrStacks();
     }
 
     private void IncludeVrUiOnHeadsetCamera()
     {
-        IncludeVrUiOnHeadsetCamera(APIBus.MainCamera ?? Camera.main);
+        IncludeVrUiOnHeadsetCamera(APIBus.HeadsetCamera);
     }
 
     private static void IncludeVrUiOnHeadsetCamera(Camera? xrCamera)
@@ -124,6 +128,56 @@ public class NOUIManager : NOVRBehaviour
         xrCamera.cullingMask |= 1 << (int)LayerHelper.GetVrUiLayer();
     }
 
+    private void DetachHudOverlayFromXrStacks()
+    {
+        var hud = _cockpitHudCamera;
+        if (hud == null)
+        {
+            return;
+        }
+
+        hud.enabled = false;
+        hud.stereoTargetEye = StereoTargetEyeMask.None;
+
+        var hudAdditional = hud.GetComponent<UniversalAdditionalCameraData>();
+        if (hudAdditional != null)
+        {
+            hudAdditional.allowXRRendering = false;
+            hudAdditional.renderType = CameraRenderType.Overlay;
+        }
+
+        var cameras = Camera.allCameras;
+        for (var i = 0; i < cameras.Length; i++)
+        {
+            var camera = cameras[i];
+            if (camera == null || camera == hud)
+            {
+                continue;
+            }
+
+            var additional = camera.GetComponent<UniversalAdditionalCameraData>();
+            if (additional == null)
+            {
+                continue;
+            }
+
+            var stack = additional.cameraStack;
+            if (stack == null)
+            {
+                continue;
+            }
+
+            for (var stackIndex = stack.Count - 1; stackIndex >= 0; stackIndex--)
+            {
+                var overlay = stack[stackIndex];
+                if (overlay == null || overlay == hud || overlay.name == "VrCockpitHudCamera")
+                {
+                    stack.RemoveAt(stackIndex);
+                }
+            }
+        }
+    }
+
     private void ConfigureUiCameras()
     {
         ConfigureUiCamera(CockpitHudCamera);
@@ -131,6 +185,7 @@ public class NOUIManager : NOVRBehaviour
 
     private static void ConfigureUiCamera(Camera camera)
     {
+        camera.enabled = false;
         camera.stereoTargetEye = StereoTargetEyeMask.None;
         camera.clearFlags = CameraClearFlags.Nothing;
         camera.backgroundColor = new Color(0f, 0f, 0f, 0f);
