@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 namespace NOVR.VrUi;
 
-[DefaultExecutionOrder(-1000)]
+[DefaultExecutionOrder(10000)]
 public class VrUiCursor: NOVRBehaviour
 {
     public static VrUiCursor? Instance { get; private set; }
@@ -46,12 +46,13 @@ public class VrUiCursor: NOVRBehaviour
     private Texture2D? _texture;
     private const float MaxYawDegrees = 65f;
     private const float MaxPitchDegrees = 45f;
-    private const float DefaultProjectionDistance = 5;
+    private const float DefaultProjectionDistance = 3;
     private const float MinProjectionDistance = 1.0f;
-    private const float CursorCanvasScale = 0.001f;
+    private const float CursorCanvasScale = 0.006f;
     private const int CursorTextureSize = 64;
-    private const float CursorRingRadius = 12f;
-    private const float CursorRingThickness = 4f;
+    private const float CursorRingRadius = 18f;
+    private const float CursorRingThickness = 6f;
+    private const float CursorDotRadius = 3.5f;
     private const float CursorIdlePulseScale = 0.035f;
     private const float CursorIdlePulseSpeed = 5.5f;
     private const float CursorHoverScale = 1.18f;
@@ -82,7 +83,7 @@ public class VrUiCursor: NOVRBehaviour
     {
         get
         {
-            return APIBus.CockpitHudCamera;
+            return APIBus.HeadsetCamera ?? Camera.main ?? (NOUIManager.I != null ? APIBus.CockpitHudCamera : null);
         }
     }
     
@@ -125,49 +126,50 @@ public class VrUiCursor: NOVRBehaviour
 
     private void Update()
     {
-        if (!Application.isFocused && !IsXrSessionActive())
+        TickCursor();
+    }
+
+    private void LateUpdate()
+    {
+        TickCursor();
+    }
+
+    protected override void OnBeforeRender()
+    {
+        base.OnBeforeRender();
+        TickCursor();
+    }
+
+    private void TickCursor()
+    {
+        if (Cursor.lockState == CursorLockMode.Locked)
         {
-            if (_cursor != null && _cursor.activeSelf)
-            {
-                _cursor.SetActive(false);
-            }
+            HideCursor();
             return;
         }
 
-        if (!IsRealCursorVisible()) // This means we don't have to manually show and hide it every game update
-        {
-            if (_cursor != null)
-            {
-                _cursor.SetActive(false);
-            }
-            return;
-        }
-        
+        _realMouse ??= Mouse.current;
         if (_virtualMouse == null)
         {
-            _realMouse = Mouse.current;
             _virtualMouse = InputSystem.AddDevice<Mouse>("VirtualMouse");
             Debug.Log($"[NOVR] Added VirtualMouse device: name='{_virtualMouse.name}', path='{_virtualMouse.path}', displayName='{_virtualMouse.displayName}'");
         }
 
-        _realMouse ??= Mouse.current;
-
-        if (!_hasInitializedEventSystem)
+        if (!_hasInitializedEventSystem && RestrictUIModuleToVirtualMouse())
         {
-            if (RestrictUIModuleToVirtualMouse())
-            {
-                _hasInitializedEventSystem = true;
-            }
+            _hasInitializedEventSystem = true;
         }
-        if (_texture == null) return;
+
+        _texture ??= CreateCursorTexture();
         UpdateCursorAngles();
-        
+
         var realMouse = _realMouse;
-        if (realMouse == null || _virtualMouse == null) return;
+        if (realMouse == null || _virtualMouse == null)
+        {
+            return;
+        }
 
         UpdateCursorAnimation(realMouse);
-
-        var screenPoint = GetScreenPoint();
 
         ushort buttons = 0;
         if (realMouse.leftButton.isPressed) buttons |= 1;
@@ -176,7 +178,7 @@ public class VrUiCursor: NOVRBehaviour
 
         InputState.Change(_virtualMouse, new MouseState
         {
-            position = screenPoint,
+            position = GetScreenPoint(),
             delta = realMouse.delta.ReadValue(),
             scroll = realMouse.scroll.ReadValue(),
             buttons = buttons
@@ -187,6 +189,14 @@ public class VrUiCursor: NOVRBehaviour
             LogRaycastAtCursor();
         }
     }
+
+    private void HideCursor()
+    {
+        if (_cursor != null && _cursor.activeSelf)
+        {
+            _cursor.SetActive(false);
+        }
+    }
     
 
     private void UpdateCursorAngles()
@@ -194,7 +204,14 @@ public class VrUiCursor: NOVRBehaviour
         var camera = UiCamera;
         if (camera == null) return;
 
+        camera.cullingMask |= 1 << (int)LayerHelper.GetVrUiLayer();
+
         EnsureCursorCanvas(camera);
+
+        if (_cursorCanvas != null)
+        {
+            _cursorCanvas.worldCamera = camera;
+        }
 
         if (_cursor == null || _cursorRectTransform == null)
         {
@@ -209,7 +226,7 @@ public class VrUiCursor: NOVRBehaviour
         var mouse = _realMouse;
         if (mouse == null)
         {
-            var fallbackDirection = GetProjectionReferenceRotation() * Vector3.forward;
+            var fallbackDirection = GetProjectionReferenceRotation(camera) * Vector3.forward;
             _cursor.transform.position = camera.transform.position + fallbackDirection * DefaultProjectionDistance;
             _cursor.transform.rotation = Quaternion.LookRotation(fallbackDirection, camera.transform.up);
             return;
@@ -220,7 +237,7 @@ public class VrUiCursor: NOVRBehaviour
         float cursorYaw = ProjectYawAngle(mousePos.x);        
         
         Vector3 localDirection = Quaternion.Euler(-cursorPitch, cursorYaw, 0f) * Vector3.forward;
-        Quaternion referenceRotation = GetProjectionReferenceRotation();
+        Quaternion referenceRotation = GetProjectionReferenceRotation(camera);
         Vector3 worldDirection = referenceRotation * localDirection;
         Vector3 viewportSpace = camera.WorldToViewportPoint(camera.transform.position + worldDirection * DefaultProjectionDistance, Camera.MonoOrStereoscopicEye.Mono);
         Vector2 inScreenSpace = new Vector2(viewportSpace.x * Screen.width, viewportSpace.y * Screen.height);
@@ -230,14 +247,14 @@ public class VrUiCursor: NOVRBehaviour
         _cursor.transform.rotation = Quaternion.LookRotation(worldDirection, camera.transform.up);
     }
 
-    private Quaternion GetProjectionReferenceRotation()
+    private Quaternion GetProjectionReferenceRotation(Camera camera)
     {
         if (_hasProjectionReferenceOverride)
         {
             return _projectionReferenceRotation;
         }
 
-        return transform.parent != null ? transform.parent.rotation : Quaternion.identity;
+        return camera.transform.rotation;
     }
     
     private void EnsureCursorCanvas(Camera uiCaptureCamera)
@@ -259,6 +276,7 @@ public class VrUiCursor: NOVRBehaviour
         _cursorCanvas.overrideSorting = true;
         _cursorCanvas.sortingOrder = short.MaxValue;
         _cursorCanvas.pixelPerfect = true;
+        _cursorCanvas.worldCamera = uiCaptureCamera;
 
         _cursorRectTransform = _cursor.GetComponent<RectTransform>();
         _cursorRectTransform.sizeDelta = new Vector2(CursorTextureSize, CursorTextureSize);
@@ -405,56 +423,20 @@ public class VrUiCursor: NOVRBehaviour
     private float ProjectPitchAngle(float y)
     {
         int height = ScreenHeight;
-        if (height <= 0) throw new System.InvalidOperationException($"[{nameof(VrUiCursor)}] Screen height is invalid ({height}).");
-        return Mathf.Lerp(-MaxPitchDegrees, MaxPitchDegrees, y / height);
+        if (height <= 0)
+        {
+            return 0f;
+        }
+        return Mathf.Lerp(-MaxPitchDegrees, MaxPitchDegrees, Mathf.Clamp01(y / height));
     }
     private float ProjectYawAngle(float x)
     {
         int width = ScreenWidth;
-        if (width <= 0) throw new System.InvalidOperationException($"[{nameof(VrUiCursor)}] Screen width is invalid ({width}).");
-        return Mathf.Lerp(-MaxYawDegrees, MaxYawDegrees, x / width);
-    }
-    private static bool IsRealCursorVisible()
-    {
-        if (Cursor.lockState == CursorLockMode.Locked)
+        if (width <= 0)
         {
-            return false;
+            return 0f;
         }
-
-        if (Cursor.visible)
-        {
-            return true;
-        }
-
-        // PSVR2 / OpenXR often hide the hardware cursor while menus still need a pointer.
-        return IsXrSessionActive();
-    }
-
-    private static bool IsXrSessionActive()
-    {
-        try
-        {
-            var xrSettingsType = System.Type.GetType("UnityEngine.XR.XRSettings, UnityEngine.XRModule") ??
-                                 System.Type.GetType("UnityEngine.XR.XRSettings, UnityEngine.VRModule") ??
-                                 System.Type.GetType("UnityEngine.XR.XRSettings, UnityEngine");
-            if (xrSettingsType == null)
-            {
-                return false;
-            }
-
-            var enabled = xrSettingsType.GetProperty("enabled")?.GetValue(null, null);
-            if (enabled is bool enabledValue && !enabledValue)
-            {
-                return false;
-            }
-
-            var deviceActive = xrSettingsType.GetProperty("isDeviceActive")?.GetValue(null, null);
-            return deviceActive is not bool activeValue || activeValue;
-        }
-        catch
-        {
-            return false;
-        }
+        return Mathf.Lerp(-MaxYawDegrees, MaxYawDegrees, Mathf.Clamp01(x / width));
     }
 
     private static Texture2D CreateCursorTexture()
@@ -477,7 +459,8 @@ public class VrUiCursor: NOVRBehaviour
             {
                 var distanceFromCenter = Vector2.Distance(new Vector2(x, y), center);
                 var isRing = distanceFromCenter >= innerRadius && distanceFromCenter <= outerRadius;
-                colors[y * CursorTextureSize + x] = isRing ? Color.white : transparent;
+                var isDot = distanceFromCenter <= CursorDotRadius;
+                colors[y * CursorTextureSize + x] = isRing || isDot ? Color.white : transparent;
             }
         }
 

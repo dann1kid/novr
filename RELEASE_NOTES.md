@@ -1,11 +1,11 @@
-# NOVR 0.4.15
+# NOVR 0.4.16
 
-Close the game, then extract `NOVR-0.4.15.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.15`.
+Close the game, then extract `NOVR-0.4.16.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.16`.
 
-## Gray pancake on a black view
+## Mouse cursor in the headset
 
-The native VR menu was a 2 m × 4 m world-space canvas drawn by the headset camera, so it filled the view as a gray disc and hid the hangar.
+Menus from 0.4.15 are unchanged: hangar visible, no clipping planes, native full-canvas menu still off.
 
-0.4.15 turns that native canvas off and restores the 0.4.8 overlay (in the camera stack, not submitting its own stereo view). You should see the hangar and the game's own menus again, world-locked about 3 m in front of their parent — not glued to your head.
+The VR pointer was being projected from the overlay camera at tracking origin, and it hid itself when the game window was unfocused. It now sits in front of the headset camera as a larger green ring and stays visible while the cursor is not locked.
 
 Stereoscopic Zoom View is still temporarily off. HUD layout from 0.4.6 is unchanged.

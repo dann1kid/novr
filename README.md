@@ -4,6 +4,10 @@ NOVR is a reworked version of [UUVR](https://github.com/Raicuparta/uuvr) designe
 
 This tree is based on the [dann1kid/novr](https://github.com/dann1kid/novr) fork of [InfernoSuperNova/novr](https://github.com/InfernoSuperNova/novr), then patched for remaining VR gaps.
 
+## 0.4.16
+
+- **Mouse cursor:** the VR pointer is drawn in front of the headset as a larger green ring. It no longer hides when the game window is unfocused.
+
 ## 0.4.15
 
 - **Gray pancake fix:** the native full-canvas VR menu is off. It was a 2 m × 4 m quad in the headset. The hangar and the game's world-space menus are shown again through the 0.4.8 overlay path.

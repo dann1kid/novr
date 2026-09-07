@@ -24,6 +24,11 @@ public class NOVRGameplayUIBehaviour : UIRenderedCanvasBehavior
         if (canvas != null)
         {
             canvas.enabled = true;
+            var eventCamera = APIBus.HeadsetCamera ?? APIBus.CockpitHudCamera;
+            if (eventCamera != null)
+            {
+                canvas.worldCamera = eventCamera;
+            }
         }
 
         transform.localScale = PanelScale;
