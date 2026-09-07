@@ -1,15 +1,17 @@
-# NOVR 0.4.21
+# NOVR 0.4.22
 
-Close the game, then extract `NOVR-0.4.21.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.21`.
+Close the game, then extract `NOVR-0.4.22.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.22`.
 
-## Green cross on the hangar splash
+## One green cross, on the splash
 
-The splash/hangar with the aircraft is drawn by the game's XR camera. Previous pointers lived on a separate UI overlay layer, so they never appeared in the headset — and if the menu canvas was not found yet, they were hidden entirely.
+0.4.21 put a huge cross in each eye twice (a 3D pair plus a GL overlay), so it looked like two crosses stuck to the lenses. The splash/menu curve also sat in front of it.
 
-0.4.21 draws a large unlit green cross **in front of the hangar camera**:
-- one stuck in the center of your view (look around — it should follow your head)
-- one that follows the mouse
+0.4.22:
+- one cross only (follows the mouse)
+- real 3D depth, so both eyes should fuse it
+- about 1 m in front of your face, so it should sit *in front of* the curved splash instead of behind it
+- no GL overlay (the desktop window should no longer be a lone cross on black)
 
-Mouse capture is unchanged. Click the game window on the monitor before putting the headset on.
+Look at the splash: you should see one green plus. Look aside: it should stay in front of you with the mouse.
 
-Native full-canvas menu stays off. Stereoscopic Zoom View is still temporarily off. HUD layout from 0.4.6 is unchanged.
+Native full-canvas menu stays off. Stereoscopic Zoom View is still temporarily off.

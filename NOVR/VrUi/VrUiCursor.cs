@@ -1,7 +1,5 @@
-using System.Collections.Generic;
 using NOVR.VrUi.SpecialBehavior;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.Rendering;
@@ -17,15 +15,17 @@ public class VrUiCursor: NOVRBehaviour
     public bool IsActive => _hudRoot != null && _hudRoot.activeSelf;
     public Vector3 CursorPosition => _hudRoot != null ? _hudRoot.transform.position : Vector3.zero;
 
-    private const float HudDistance = 2.1f;
-    private const float HudFollowWidth = 1.8f;
-    private const float HudFollowHeight = 1.1f;
+    private const float MinHudDistance = 0.75f;
+    private const float DefaultHudDistance = 0.95f;
+    private const float MaxHudDistance = 2.8f;
+    private const float HudFollowWidth = 0.85f;
+    private const float HudFollowHeight = 0.5f;
+    private const float CrossLength = 0.22f;
+    private const float CrossThickness = 0.022f;
     private static readonly Color CursorColor = new Color(0.1f, 1f, 0.2f, 1f);
 
     private GameObject? _hudRoot;
-    private GameObject? _centerRoot;
     private Material? _unlitMaterial;
-    private Material? _glMaterial;
     private Transform? _boundHost;
     private bool _loggedHud;
     private bool _hideHud;
@@ -42,15 +42,8 @@ public class VrUiCursor: NOVRBehaviour
         Instance = this;
     }
 
-    protected override void OnEnable()
-    {
-        base.OnEnable();
-        RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
-    }
-
     protected override void OnDisable()
     {
-        RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
         ReleaseMouseCapture();
         base.OnDisable();
     }
@@ -278,24 +271,36 @@ public class VrUiCursor: NOVRBehaviour
         }
 
         EnsureHud();
-        if (_hudRoot == null || _centerRoot == null)
+        if (_hudRoot == null)
         {
             return;
         }
 
-        SetHudVisible(true);
-        AttachHud(_centerRoot, camera, Vector3.forward * HudDistance);
         var mouse = GetScreenPoint();
         var nx = Screen.width > 0 ? Mathf.Clamp01(mouse.x / Screen.width) : 0.5f;
         var ny = Screen.height > 0 ? Mathf.Clamp01(mouse.y / Screen.height) : 0.5f;
-        var follow = new Vector3((nx - 0.5f) * HudFollowWidth, (ny - 0.5f) * HudFollowHeight, HudDistance);
-        AttachHud(_hudRoot, camera, follow);
+        var localDirection = new Vector3((nx - 0.5f) * HudFollowWidth, (ny - 0.5f) * HudFollowHeight, 1f);
+        var distance = GetHudDistance(camera, localDirection);
+        AttachHud(_hudRoot, camera, localDirection.normalized * distance);
+        SetHudVisible(true);
 
         if (!_loggedHud)
         {
             _loggedHud = true;
             Debug.Log($"[NOVR] Hangar HUD cursor on '{camera.gameObject.name}', layer=Default, lockState={Cursor.lockState}.");
         }
+    }
+
+    private static float GetHudDistance(Camera camera, Vector3 localDirection)
+    {
+        var origin = camera.transform.position;
+        var direction = camera.transform.TransformDirection(localDirection.normalized);
+        if (Physics.Raycast(origin, direction, out var hit, MaxHudDistance + 1f, camera.cullingMask, QueryTriggerInteraction.Ignore))
+        {
+            return Mathf.Clamp(hit.distance - 0.12f, MinHudDistance, MaxHudDistance);
+        }
+
+        return DefaultHudDistance;
     }
 
     private void AttachHud(GameObject root, Camera camera, Vector3 localPosition)
@@ -319,14 +324,9 @@ public class VrUiCursor: NOVRBehaviour
             return;
         }
 
-        if (_centerRoot == null)
-        {
-            _centerRoot = CreateCrossRoot("NOVR HangarCursorCenter", 0.85f, 0.07f);
-        }
-
         if (_hudRoot == null)
         {
-            _hudRoot = CreateCrossRoot("NOVR HangarCursor", 0.55f, 0.05f);
+            _hudRoot = CreateCrossRoot("NOVR HangarCursor", CrossLength, CrossThickness);
         }
     }
 
@@ -381,7 +381,8 @@ public class VrUiCursor: NOVRBehaviour
         material.SetColor("_BaseColor", CursorColor);
         material.SetInt("_ZTest", (int)CompareFunction.Always);
         material.SetInt("_ZWrite", 0);
-        material.renderQueue = 4000;
+        material.SetFloat("_Surface", 1f);
+        material.renderQueue = 5000;
         Debug.Log($"[NOVR] Hangar cursor shader '{shader.name}'.");
         return material;
     }
@@ -401,11 +402,6 @@ public class VrUiCursor: NOVRBehaviour
         {
             _hudRoot.SetActive(visible);
         }
-
-        if (_centerRoot != null && _centerRoot.activeSelf != visible)
-        {
-            _centerRoot.SetActive(visible);
-        }
     }
 
     private void DestroyHud()
@@ -416,53 +412,7 @@ public class VrUiCursor: NOVRBehaviour
             _hudRoot = null;
         }
 
-        if (_centerRoot != null)
-        {
-            Destroy(_centerRoot);
-            _centerRoot = null;
-        }
-
         _unlitMaterial = null;
-        _glMaterial = null;
-    }
-
-    private void OnEndCameraRendering(ScriptableRenderContext context, Camera camera)
-    {
-        if (_hideHud || !IsHangarCamera(camera))
-        {
-            return;
-        }
-
-        _glMaterial ??= CreateUnlitMaterial();
-        if (_glMaterial == null || !_glMaterial.SetPass(0))
-        {
-            return;
-        }
-
-        var mouse = GetScreenPoint();
-        var nx = Screen.width > 0 ? Mathf.Clamp01(mouse.x / Screen.width) : 0.5f;
-        var ny = Screen.height > 0 ? Mathf.Clamp01(mouse.y / Screen.height) : 0.5f;
-
-        GL.PushMatrix();
-        GL.LoadOrtho();
-        GL.Begin(GL.QUADS);
-        GL.Color(CursorColor);
-        DrawGlBar(0.5f, 0.5f, 0.22f, 0.018f);
-        DrawGlBar(0.5f, 0.5f, 0.018f, 0.22f);
-        DrawGlBar(nx, ny, 0.14f, 0.012f);
-        DrawGlBar(nx, ny, 0.012f, 0.14f);
-        GL.End();
-        GL.PopMatrix();
-    }
-
-    private static void DrawGlBar(float x, float y, float width, float height)
-    {
-        var halfW = width * 0.5f;
-        var halfH = height * 0.5f;
-        GL.Vertex3(x - halfW, y - halfH, 0f);
-        GL.Vertex3(x + halfW, y - halfH, 0f);
-        GL.Vertex3(x + halfW, y + halfH, 0f);
-        GL.Vertex3(x - halfW, y + halfH, 0f);
     }
 
     private static Transform? FindActiveMenuCanvas()
