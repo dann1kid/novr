@@ -15,17 +15,16 @@ public class VrUiCursor: NOVRBehaviour
     public bool IsActive => _hudRoot != null && _hudRoot.activeSelf;
     public Vector3 CursorPosition => _hudRoot != null ? _hudRoot.transform.position : Vector3.zero;
 
-    private const float MinHudDistance = 0.75f;
-    private const float DefaultHudDistance = 0.95f;
-    private const float MaxHudDistance = 2.8f;
-    private const float HudFollowWidth = 0.85f;
-    private const float HudFollowHeight = 0.5f;
-    private const float CrossLength = 0.22f;
-    private const float CrossThickness = 0.022f;
+    private const float OverlayCursorDistance = 2.7f;
+    private const float CrossLength = 0.28f;
+    private const float CrossThickness = 0.028f;
+    private const float GlBarWidth = 0.16f;
+    private const float GlBarThickness = 0.014f;
     private static readonly Color CursorColor = new Color(0.1f, 1f, 0.2f, 1f);
 
     private GameObject? _hudRoot;
-    private Material? _unlitMaterial;
+    private Material? _meshMaterial;
+    private Material? _glMaterial;
     private Transform? _boundHost;
     private bool _loggedHud;
     private bool _hideHud;
@@ -42,8 +41,17 @@ public class VrUiCursor: NOVRBehaviour
         Instance = this;
     }
 
+    protected override void OnEnable()
+    {
+        base.OnEnable();
+        RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
+        Camera.onPostRender += OnCameraPostRender;
+    }
+
     protected override void OnDisable()
     {
+        RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
+        Camera.onPostRender -= OnCameraPostRender;
         ReleaseMouseCapture();
         base.OnDisable();
     }
@@ -71,7 +79,7 @@ public class VrUiCursor: NOVRBehaviour
         }
     }
 
-    public Camera? UiCamera => GetHangarCamera();
+    public Camera? UiCamera => GetOverlayCamera() ?? GetHangarCamera();
 
     public Vector2 GetScreenPoint()
     {
@@ -151,7 +159,7 @@ public class VrUiCursor: NOVRBehaviour
             _hasInitializedEventSystem = true;
         }
 
-        UpdateHangarHud();
+        UpdateOverlayHud();
 
         var realMouse = _realMouse;
         if (realMouse == null || _virtualMouse == null)
@@ -174,7 +182,6 @@ public class VrUiCursor: NOVRBehaviour
 
         _ = _hasProjectionReferenceOverride;
         _ = _projectionReferenceRotation;
-        _ = _boundHost;
     }
 
     private static bool ShouldHideInCockpit()
@@ -215,6 +222,45 @@ public class VrUiCursor: NOVRBehaviour
         return new Vector2(
             Mathf.Clamp(mousePos.x, 0f, Mathf.Max(1, Screen.width)),
             Mathf.Clamp(mousePos.y, 0f, Mathf.Max(1, Screen.height)));
+    }
+
+    private static Camera? GetOverlayCamera()
+    {
+        if (NOUIManager.I != null)
+        {
+            var hud = APIBus.CockpitHudCamera;
+            if (hud != null && hud.enabled)
+            {
+                return hud;
+            }
+        }
+
+        var cameras = Camera.allCameras;
+        for (var i = 0; i < cameras.Length; i++)
+        {
+            var camera = cameras[i];
+            if (camera != null && camera.enabled && camera.gameObject.name.Contains("VrCockpitHud"))
+            {
+                return camera;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsOverlayUiCamera(Camera? camera)
+    {
+        if (camera == null || !camera.enabled)
+        {
+            return false;
+        }
+
+        if (NOUIManager.I != null && camera == APIBus.CockpitHudCamera)
+        {
+            return true;
+        }
+
+        return camera.gameObject.name.Contains("VrCockpitHud");
     }
 
     private static Camera? GetHangarCamera()
@@ -262,11 +308,12 @@ public class VrUiCursor: NOVRBehaviour
                name.Contains("Main Camera");
     }
 
-    private void UpdateHangarHud()
+    private void UpdateOverlayHud()
     {
-        var camera = GetHangarCamera();
-        if (camera == null)
+        var overlay = GetOverlayCamera();
+        if (overlay == null)
         {
+            SetHudVisible(false);
             return;
         }
 
@@ -276,57 +323,72 @@ public class VrUiCursor: NOVRBehaviour
             return;
         }
 
-        var mouse = GetScreenPoint();
-        var nx = Screen.width > 0 ? Mathf.Clamp01(mouse.x / Screen.width) : 0.5f;
-        var ny = Screen.height > 0 ? Mathf.Clamp01(mouse.y / Screen.height) : 0.5f;
-        var localDirection = new Vector3((nx - 0.5f) * HudFollowWidth, (ny - 0.5f) * HudFollowHeight, 1f);
-        var distance = GetHudDistance(camera, localDirection);
-        AttachHud(_hudRoot, camera, localDirection.normalized * distance);
+        var host = GetMenuHost();
+        var worldPosition = GetCursorWorldPosition(overlay, host);
+        var forward = host != null ? host.forward : overlay.transform.forward;
+        var up = host != null ? host.up : overlay.transform.up;
+        if (forward.sqrMagnitude < 0.0001f)
+        {
+            forward = overlay.transform.forward;
+        }
+
+        _hudRoot.transform.SetParent(null, false);
+        _hudRoot.transform.SetPositionAndRotation(worldPosition, Quaternion.LookRotation(forward, up));
+        SetLayerVrUi(_hudRoot.transform);
         SetHudVisible(true);
 
         if (!_loggedHud)
         {
             _loggedHud = true;
-            Debug.Log($"[NOVR] Hangar HUD cursor on '{camera.gameObject.name}', layer=Default, lockState={Cursor.lockState}.");
+            Debug.Log($"[NOVR] Overlay HUD cursor on '{overlay.gameObject.name}', layer=VrUi, lockState={Cursor.lockState}.");
         }
     }
 
-    private static float GetHudDistance(Camera camera, Vector3 localDirection)
+    private Transform? GetMenuHost()
     {
-        var origin = camera.transform.position;
-        var direction = camera.transform.TransformDirection(localDirection.normalized);
-        if (Physics.Raycast(origin, direction, out var hit, MaxHudDistance + 1f, camera.cullingMask, QueryTriggerInteraction.Ignore))
+        if (IsUsableHost(_boundHost))
         {
-            return Mathf.Clamp(hit.distance - 0.12f, MinHudDistance, MaxHudDistance);
+            return _boundHost;
         }
 
-        return DefaultHudDistance;
+        return FindActiveMenuCanvas();
     }
 
-    private void AttachHud(GameObject root, Camera camera, Vector3 localPosition)
+    private Vector3 GetCursorWorldPosition(Camera overlay, Transform? host)
     {
-        if (root.transform.parent != camera.transform)
+        var mouse = GetNormalizedMouse();
+        var ray = overlay.ViewportPointToRay(new Vector3(mouse.x, mouse.y, 0f));
+        if (host != null)
         {
-            root.transform.SetParent(camera.transform, false);
-            SetLayerDefault(root.transform);
+            var plane = new Plane(host.forward, host.position);
+            if (plane.Raycast(ray, out var enter) && enter > overlay.nearClipPlane && enter < 20f)
+            {
+                return ray.GetPoint(enter) - host.forward * 0.05f;
+            }
         }
 
-        root.transform.localPosition = localPosition;
-        root.transform.localRotation = Quaternion.identity;
-        root.transform.localScale = Vector3.one;
+        return overlay.ViewportToWorldPoint(new Vector3(mouse.x, mouse.y, OverlayCursorDistance));
+    }
+
+    private Vector2 GetNormalizedMouse()
+    {
+        var mouse = GetScreenPoint();
+        return new Vector2(
+            Screen.width > 0 ? Mathf.Clamp01(mouse.x / Screen.width) : 0.5f,
+            Screen.height > 0 ? Mathf.Clamp01(mouse.y / Screen.height) : 0.5f);
     }
 
     private void EnsureHud()
     {
-        _unlitMaterial ??= CreateUnlitMaterial();
-        if (_unlitMaterial == null)
+        _meshMaterial ??= CreateMeshMaterial();
+        if (_meshMaterial == null)
         {
             return;
         }
 
         if (_hudRoot == null)
         {
-            _hudRoot = CreateCrossRoot("NOVR HangarCursor", CrossLength, CrossThickness);
+            _hudRoot = CreateCrossRoot("NOVR OverlayCursor", CrossLength, CrossThickness);
         }
     }
 
@@ -335,7 +397,7 @@ public class VrUiCursor: NOVRBehaviour
         var root = new GameObject(name);
         CreateBar(root.transform, "BarH", new Vector3(length, thickness, thickness));
         CreateBar(root.transform, "BarV", new Vector3(thickness, length, thickness));
-        SetLayerDefault(root.transform);
+        SetLayerVrUi(root.transform);
         return root;
     }
 
@@ -354,28 +416,53 @@ public class VrUiCursor: NOVRBehaviour
         }
 
         var renderer = bar.GetComponent<MeshRenderer>();
-        renderer.sharedMaterial = _unlitMaterial;
+        renderer.sharedMaterial = _meshMaterial;
         renderer.shadowCastingMode = ShadowCastingMode.Off;
         renderer.receiveShadows = false;
         renderer.lightProbeUsage = LightProbeUsage.Off;
         renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
+        renderer.allowOcclusionWhenDynamic = false;
     }
 
-    private static Material? CreateUnlitMaterial()
+    private static Material? CreateMeshMaterial()
     {
-        var shader = Shader.Find("Hidden/Internal-Colored") ??
+        var shader = Shader.Find("Universal Render Pipeline/Unlit") ??
                      Shader.Find("Sprites/Default") ??
                      Shader.Find("Unlit/Color") ??
+                     Shader.Find("UI/Default") ??
                      Shader.Find("GUI/Text Shader") ??
-                     Shader.Find("Universal Render Pipeline/Unlit") ??
-                     Shader.Find("UI/Default");
+                     Shader.Find("Hidden/Internal-Colored");
         if (shader == null)
         {
-            Debug.LogError("[NOVR] No unlit shader found for hangar cursor.");
+            Debug.LogError("[NOVR] No unlit shader found for overlay cursor mesh.");
             return null;
         }
 
         var material = new Material(shader);
+        ApplyCursorMaterial(material);
+        Debug.Log($"[NOVR] Overlay cursor mesh shader '{shader.name}'.");
+        return material;
+    }
+
+    private static Material? CreateGlMaterial()
+    {
+        var shader = Shader.Find("Hidden/Internal-Colored") ??
+                     Shader.Find("GUI/Text Shader") ??
+                     Shader.Find("Sprites/Default");
+        if (shader == null)
+        {
+            Debug.LogError("[NOVR] No shader found for overlay cursor GL pass.");
+            return null;
+        }
+
+        var material = new Material(shader);
+        ApplyCursorMaterial(material);
+        Debug.Log($"[NOVR] Overlay cursor GL shader '{shader.name}'.");
+        return material;
+    }
+
+    private static void ApplyCursorMaterial(Material material)
+    {
         material.color = CursorColor;
         material.SetColor("_Color", CursorColor);
         material.SetColor("_BaseColor", CursorColor);
@@ -383,17 +470,11 @@ public class VrUiCursor: NOVRBehaviour
         material.SetInt("_ZWrite", 0);
         material.SetFloat("_Surface", 1f);
         material.renderQueue = 5000;
-        Debug.Log($"[NOVR] Hangar cursor shader '{shader.name}'.");
-        return material;
     }
 
-    private static void SetLayerDefault(Transform transform)
+    private static void SetLayerVrUi(Transform transform)
     {
-        transform.gameObject.layer = (int)LayerHelper.Layers.Default;
-        for (var i = 0; i < transform.childCount; i++)
-        {
-            SetLayerDefault(transform.GetChild(i));
-        }
+        LayerHelper.SetLayerRecursive(transform, LayerHelper.GetVrUiLayer());
     }
 
     private void SetHudVisible(bool visible)
@@ -412,7 +493,52 @@ public class VrUiCursor: NOVRBehaviour
             _hudRoot = null;
         }
 
-        _unlitMaterial = null;
+        _meshMaterial = null;
+        _glMaterial = null;
+    }
+
+    private void OnEndCameraRendering(ScriptableRenderContext context, Camera camera)
+    {
+        DrawOverlayGlCursor(camera);
+    }
+
+    private void OnCameraPostRender(Camera camera)
+    {
+        DrawOverlayGlCursor(camera);
+    }
+
+    private void DrawOverlayGlCursor(Camera camera)
+    {
+        if (_hideHud || !IsOverlayUiCamera(camera))
+        {
+            return;
+        }
+
+        _glMaterial ??= CreateGlMaterial();
+        if (_glMaterial == null || !_glMaterial.SetPass(0))
+        {
+            return;
+        }
+
+        var mouse = GetNormalizedMouse();
+        GL.PushMatrix();
+        GL.LoadOrtho();
+        GL.Begin(GL.QUADS);
+        GL.Color(CursorColor);
+        DrawGlBar(mouse.x, mouse.y, GlBarWidth, GlBarThickness);
+        DrawGlBar(mouse.x, mouse.y, GlBarThickness, GlBarWidth);
+        GL.End();
+        GL.PopMatrix();
+    }
+
+    private static void DrawGlBar(float x, float y, float width, float height)
+    {
+        var halfW = width * 0.5f;
+        var halfH = height * 0.5f;
+        GL.Vertex3(x - halfW, y - halfH, 0f);
+        GL.Vertex3(x + halfW, y - halfH, 0f);
+        GL.Vertex3(x + halfW, y + halfH, 0f);
+        GL.Vertex3(x - halfW, y + halfH, 0f);
     }
 
     private static Transform? FindActiveMenuCanvas()
