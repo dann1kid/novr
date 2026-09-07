@@ -4,6 +4,10 @@ NOVR is a reworked version of [UUVR](https://github.com/Raicuparta/uuvr) designe
 
 This tree is based on the [dann1kid/novr](https://github.com/dann1kid/novr) fork of [InfernoSuperNova/novr](https://github.com/InfernoSuperNova/novr), then patched for remaining VR gaps.
 
+## 0.4.21
+
+- **Cursor in the hangar view:** the pointer is no longer a UI overlay child. A large unlit green cross is parented to the hangar XR camera (Default layer) and also drawn into that camera's frame, so it sits on the splash/hangar you already see.
+
 ## 0.4.20
 
 - **Menu pointer actually draws:** Nuclear Option locks the OS cursor in the hangar, and NOVR was hiding the VR pointer whenever that happened. The pointer now stays up while a menu canvas is visible, including a large green cross pinned to the center of the panel.
