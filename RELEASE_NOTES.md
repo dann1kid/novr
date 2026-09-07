@@ -1,12 +1,12 @@
-# NOVR 0.4.19
+# NOVR 0.4.20
 
-Close the game, then extract `NOVR-0.4.19.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.19`.
+Close the game, then extract `NOVR-0.4.20.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.20`.
 
-## Green pointer on the menus
+## Green cross on the menu
 
-Mouse capture was already working. The ring still did not show because it was a separate 3D mesh with its own shader, and the VR overlay only draws the game's UI canvases.
+The hangar locks the hardware mouse (`Cursor.lockState = Locked`). Older builds treated that as "cockpit, hide the VR pointer", so the ring was never drawn even though the window still captured the mouse.
 
-The pointer is now a child of those menus: a large green cross, a ring, and a + sign, built from the same Unity `Image` / `Text` components as the buttons. It should sit on the panel and follow the mouse.
+0.4.20 keeps the pointer while the hangar/pause menus are up. You should see a large green cross in the **center of the menu panel**, plus a second cross that follows the mouse.
 
 Click the game window on the monitor before putting the headset on. Alt-tab still releases the mouse.
 

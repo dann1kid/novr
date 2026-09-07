@@ -4,6 +4,10 @@ NOVR is a reworked version of [UUVR](https://github.com/Raicuparta/uuvr) designe
 
 This tree is based on the [dann1kid/novr](https://github.com/dann1kid/novr) fork of [InfernoSuperNova/novr](https://github.com/InfernoSuperNova/novr), then patched for remaining VR gaps.
 
+## 0.4.20
+
+- **Menu pointer actually draws:** Nuclear Option locks the OS cursor in the hangar, and NOVR was hiding the VR pointer whenever that happened. The pointer now stays up while a menu canvas is visible, including a large green cross pinned to the center of the panel.
+
 ## 0.4.19
 
 - **Green menu pointer:** the cursor is now a Unity UI child of the hangar menus (green cross, ring, and +), using the same Image/Text path as the buttons. 0.4.18's separate mesh/shader quad never appeared in the headset.

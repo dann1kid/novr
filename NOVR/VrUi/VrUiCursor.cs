@@ -69,6 +69,8 @@ public class VrUiCursor: NOVRBehaviour
 
     private GameObject? _cursor;
     private RectTransform? _cursorRect;
+    private GameObject? _centerMarker;
+    private RectTransform? _centerRect;
     private Canvas? _ownedCanvas;
     private Image? _crossBar;
     private Image? _crossStem;
@@ -80,6 +82,7 @@ public class VrUiCursor: NOVRBehaviour
     private Sprite? _ringSprite;
     private Transform? _boundHost;
     private Transform? _menuHost;
+    private bool _loggedHost;
     private bool _cursorOverInteractive;
     private float _lastCursorClickTime = -100f;
     private bool _hasProjectionReferenceOverride;
@@ -166,7 +169,11 @@ public class VrUiCursor: NOVRBehaviour
 
     private void TickCursor()
     {
-        if (Cursor.lockState == CursorLockMode.Locked && !_owningMouseCapture)
+        var menuHost = FindActiveMenuCanvas();
+        // The game often sets Cursor.lockState = Locked in the hangar. That used
+        // to hide the VR pointer every frame before it was drawn. Only hide it
+        // in the cockpit, when no menu canvas is up.
+        if (menuHost == null && Cursor.lockState == CursorLockMode.Locked)
         {
             WindowsCursorClip.Release();
             HideCursor();
@@ -194,7 +201,7 @@ public class VrUiCursor: NOVRBehaviour
             _hasInitializedEventSystem = true;
         }
 
-        UpdateCursorAngles();
+        UpdateCursorAngles(menuHost);
 
         var realMouse = _realMouse;
         if (realMouse == null || _virtualMouse == null)
@@ -252,6 +259,11 @@ public class VrUiCursor: NOVRBehaviour
         {
             _cursor.SetActive(false);
         }
+
+        if (_centerMarker != null && _centerMarker.activeSelf)
+        {
+            _centerMarker.SetActive(false);
+        }
     }
 
     private static Vector2 ClampToScreen(Vector2 mousePos)
@@ -261,7 +273,7 @@ public class VrUiCursor: NOVRBehaviour
             Mathf.Clamp(mousePos.y, 0f, Mathf.Max(1, Screen.height)));
     }
 
-    private void UpdateCursorAngles()
+    private void UpdateCursorAngles(Transform? host)
     {
         EnsureCursorVisual();
         if (_cursor == null || _cursorRect == null)
@@ -274,12 +286,17 @@ public class VrUiCursor: NOVRBehaviour
             _cursor.SetActive(true);
         }
 
-        var host = FindActiveMenuCanvas();
         if (host != null)
         {
             AttachToMenu(host);
             PlaceOnMenu(host);
+            PlaceCenterMarker(host);
             return;
+        }
+
+        if (_centerMarker != null)
+        {
+            _centerMarker.SetActive(false);
         }
 
         var camera = UiCamera;
@@ -332,6 +349,17 @@ public class VrUiCursor: NOVRBehaviour
         _marker.verticalOverflow = VerticalWrapMode.Overflow;
 
         LayerHelper.SetLayerRecursive(_cursor.transform, LayerHelper.GetVrUiLayer());
+
+        _centerMarker = new GameObject("NOVR VrCursorCenter");
+        _centerRect = _centerMarker.AddComponent<RectTransform>();
+        _centerRect.sizeDelta = Vector2.zero;
+        _centerRect.anchorMin = new Vector2(0.5f, 0.5f);
+        _centerRect.anchorMax = new Vector2(0.5f, 0.5f);
+        _centerRect.pivot = new Vector2(0.5f, 0.5f);
+        CreateSolidImage("CenterBar", _centerRect, new Vector2(420f, 40f));
+        CreateSolidImage("CenterStem", _centerRect, new Vector2(40f, 420f));
+        LayerHelper.SetLayerRecursive(_centerMarker.transform, LayerHelper.GetVrUiLayer());
+
         Debug.Log("[NOVR] VR cursor created as Unity UI graphics on the menu canvas.");
     }
 
@@ -361,7 +389,14 @@ public class VrUiCursor: NOVRBehaviour
             _cursor = null;
         }
 
+        if (_centerMarker != null)
+        {
+            Destroy(_centerMarker);
+            _centerMarker = null;
+        }
+
         _cursorRect = null;
+        _centerRect = null;
         _ownedCanvas = null;
         _crossBar = null;
         _crossStem = null;
@@ -385,12 +420,15 @@ public class VrUiCursor: NOVRBehaviour
             _ownedCanvas = null;
         }
 
-        if (_cursor.transform.parent != host)
+        var canvasHost = GetBestCanvasTransform(host);
+        if (_cursor.transform.parent != canvasHost)
         {
-            _cursor.transform.SetParent(host, false);
-            _menuHost = host;
+            _cursor.transform.SetParent(canvasHost, false);
+            _menuHost = canvasHost;
             LayerHelper.SetLayerRecursive(_cursor.transform, LayerHelper.GetVrUiLayer());
-            Debug.Log($"[NOVR] VR cursor attached to menu '{host.name}' as a UI child.");
+            AdoptWorkingSprite(canvasHost);
+            Canvas.ForceUpdateCanvases();
+            Debug.Log($"[NOVR] VR cursor attached to '{canvasHost.name}' (lockState={Cursor.lockState}, focused={Application.isFocused}).");
         }
 
         _cursorRect.localScale = Vector3.one;
@@ -433,34 +471,137 @@ public class VrUiCursor: NOVRBehaviour
             return;
         }
 
+        var canvasHost = _menuHost != null ? _menuHost : GetBestCanvasTransform(host);
+        var hostRect = canvasHost as RectTransform ?? canvasHost.GetComponent<RectTransform>();
         var mousePos = GetScreenPoint();
-        var nx = ScreenWidth > 0 ? Mathf.Clamp01(mousePos.x / ScreenWidth) : 0.5f;
-        var ny = ScreenHeight > 0 ? Mathf.Clamp01(mousePos.y / ScreenHeight) : 0.5f;
-
-        var hostRect = host as RectTransform ?? host.GetComponent<RectTransform>();
-        Vector2 anchored;
-        if (hostRect != null)
-        {
-            var rect = hostRect.rect;
-            anchored = new Vector2(
-                Mathf.Lerp(rect.xMin, rect.xMax, nx),
-                Mathf.Lerp(rect.yMin, rect.yMax, ny));
-        }
-        else
-        {
-            anchored = new Vector2((nx - 0.5f) * 1920f, (ny - 0.5f) * 1080f);
-        }
+        var canvas = canvasHost.GetComponent<Canvas>();
+        var eventCamera = canvas != null ? canvas.worldCamera : null;
+        eventCamera ??= UiCamera;
 
         _cursorRect.anchorMin = new Vector2(0.5f, 0.5f);
         _cursorRect.anchorMax = new Vector2(0.5f, 0.5f);
         _cursorRect.pivot = new Vector2(0.5f, 0.5f);
-        _cursorRect.anchoredPosition = anchored;
         _cursorRect.localRotation = Quaternion.identity;
         _cursorRect.localScale = Vector3.one;
+
+        if (hostRect != null &&
+            eventCamera != null &&
+            RectTransformUtility.ScreenPointToWorldPointInRectangle(hostRect, mousePos, eventCamera, out var world))
+        {
+            _cursorRect.position = world;
+        }
+        else if (hostRect != null)
+        {
+            var nx = ScreenWidth > 0 ? Mathf.Clamp01(mousePos.x / ScreenWidth) : 0.5f;
+            var ny = ScreenHeight > 0 ? Mathf.Clamp01(mousePos.y / ScreenHeight) : 0.5f;
+            _cursorRect.anchoredPosition = new Vector2(
+                Mathf.Lerp(hostRect.rect.xMin, hostRect.rect.xMax, nx),
+                Mathf.Lerp(hostRect.rect.yMin, hostRect.rect.yMax, ny));
+        }
+
         var local = _cursorRect.localPosition;
         _cursorRect.localPosition = new Vector3(local.x, local.y, MenuCanvasFrontOffset);
         _cursorRect.SetAsLastSibling();
         UpdateHoverFromScreen(mousePos);
+    }
+
+    private void PlaceCenterMarker(Transform host)
+    {
+        if (_centerMarker == null || _centerRect == null)
+        {
+            return;
+        }
+
+        var canvasHost = _menuHost != null ? _menuHost : GetBestCanvasTransform(host);
+        if (_centerMarker.transform.parent != canvasHost)
+        {
+            _centerMarker.transform.SetParent(canvasHost, false);
+            LayerHelper.SetLayerRecursive(_centerMarker.transform, LayerHelper.GetVrUiLayer());
+        }
+
+        if (!_centerMarker.activeSelf)
+        {
+            _centerMarker.SetActive(true);
+        }
+
+        _centerRect.anchorMin = new Vector2(0.5f, 0.5f);
+        _centerRect.anchorMax = new Vector2(0.5f, 0.5f);
+        _centerRect.pivot = new Vector2(0.5f, 0.5f);
+        _centerRect.anchoredPosition = Vector2.zero;
+        _centerRect.localRotation = Quaternion.identity;
+        _centerRect.localScale = Vector3.one;
+        _centerRect.localPosition = new Vector3(0f, 0f, MenuCanvasFrontOffset);
+        _centerRect.SetAsLastSibling();
+        if (_cursorRect != null)
+        {
+            _cursorRect.SetAsLastSibling();
+        }
+
+        if (!_loggedHost)
+        {
+            _loggedHost = true;
+            var graphics = canvasHost.GetComponentsInChildren<Graphic>(true).Length;
+            Debug.Log($"[NOVR] Center cursor marker on '{canvasHost.name}', graphics={graphics}, lockState={Cursor.lockState}.");
+        }
+    }
+
+    private static Transform GetBestCanvasTransform(Transform host)
+    {
+        var canvases = host.GetComponentsInChildren<Canvas>(true);
+        Canvas? best = host.GetComponent<Canvas>();
+        var bestCount = -1;
+        for (var i = 0; i < canvases.Length; i++)
+        {
+            var canvas = canvases[i];
+            if (canvas == null || !canvas.enabled || !canvas.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            if (canvas.renderMode != RenderMode.WorldSpace || canvas.transform.position.y < -1000f)
+            {
+                continue;
+            }
+
+            var count = canvas.GetComponentsInChildren<Graphic>(true).Length;
+            if (count > bestCount)
+            {
+                bestCount = count;
+                best = canvas;
+            }
+        }
+
+        return best != null ? best.transform : host;
+    }
+
+    private void AdoptWorkingSprite(Transform host)
+    {
+        var images = host.GetComponentsInChildren<Image>(true);
+        Sprite? working = null;
+        for (var i = 0; i < images.Length; i++)
+        {
+            var image = images[i];
+            if (image == null || image.sprite == null || _images.Contains(image))
+            {
+                continue;
+            }
+
+            working = image.sprite;
+            break;
+        }
+
+        if (working == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < _images.Count; i++)
+        {
+            if (_images[i] != null && _images[i] != _ring)
+            {
+                _images[i].sprite = working;
+            }
+        }
     }
 
     private void PlaceOnOverlayCanvas()
@@ -619,12 +760,20 @@ public class VrUiCursor: NOVRBehaviour
 
     private static Sprite CreateWhiteSprite()
     {
-        var texture = Texture2D.whiteTexture;
-        return Sprite.Create(
-            texture,
-            new Rect(0f, 0f, texture.width, texture.height),
-            new Vector2(0.5f, 0.5f),
-            100f);
+        var texture = new Texture2D(8, 8, TextureFormat.RGBA32, false)
+        {
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp
+        };
+        var pixels = new Color32[64];
+        for (var i = 0; i < pixels.Length; i++)
+        {
+            pixels[i] = new Color32(255, 255, 255, 255);
+        }
+
+        texture.SetPixels32(pixels);
+        texture.Apply();
+        return Sprite.Create(texture, new Rect(0f, 0f, 8f, 8f), new Vector2(0.5f, 0.5f), 100f);
     }
 
     private static Sprite CreateRingSprite()
