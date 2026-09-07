@@ -4,6 +4,10 @@ NOVR is a reworked version of [UUVR](https://github.com/Raicuparta/uuvr) designe
 
 This tree is based on the [dann1kid/novr](https://github.com/dann1kid/novr) fork of [InfernoSuperNova/novr](https://github.com/InfernoSuperNova/novr), then patched for remaining VR gaps.
 
+## 0.4.17
+
+- **Mouse capture:** while the game window is focused, the OS cursor is confined to that window so it cannot wander onto other monitors. Alt-tab releases it.
+
 ## 0.4.16
 
 - **Mouse cursor:** the VR pointer is drawn in front of the headset as a larger green ring. It no longer hides when the game window is unfocused.

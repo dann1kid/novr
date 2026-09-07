@@ -29,6 +29,7 @@ public class VrUiCursor: NOVRBehaviour
         {
             Instance = null;
         }
+        ReleaseMouseCapture();
         if (_virtualMouse != null)
         {
             try
@@ -73,6 +74,7 @@ public class VrUiCursor: NOVRBehaviour
     private Quaternion _projectionReferenceRotation = Quaternion.identity;
 
     private bool _hasInitializedEventSystem = false;
+    private bool _owningMouseCapture;
     private Mouse? _virtualMouse;
     private Mouse? _realMouse;
     
@@ -140,13 +142,30 @@ public class VrUiCursor: NOVRBehaviour
         TickCursor();
     }
 
+    protected override void OnDisable()
+    {
+        ReleaseMouseCapture();
+        base.OnDisable();
+    }
+
     private void TickCursor()
     {
-        if (Cursor.lockState == CursorLockMode.Locked)
+        if (!Application.isFocused)
         {
+            ReleaseMouseCapture();
             HideCursor();
             return;
         }
+
+        // The game locks the cursor in the cockpit. Do not steal it.
+        if (Cursor.lockState == CursorLockMode.Locked && !_owningMouseCapture)
+        {
+            WindowsCursorClip.Release();
+            HideCursor();
+            return;
+        }
+
+        CaptureMouseToGameWindow();
 
         _realMouse ??= Mouse.current;
         if (_virtualMouse == null)
@@ -188,6 +207,29 @@ public class VrUiCursor: NOVRBehaviour
         {
             LogRaycastAtCursor();
         }
+    }
+
+    private void CaptureMouseToGameWindow()
+    {
+        _owningMouseCapture = true;
+        Cursor.visible = false;
+        if (Cursor.lockState != CursorLockMode.Locked)
+        {
+            Cursor.lockState = CursorLockMode.Confined;
+        }
+
+        WindowsCursorClip.ConfineToGameWindow();
+    }
+
+    private void ReleaseMouseCapture()
+    {
+        if (_owningMouseCapture && Cursor.lockState == CursorLockMode.Confined)
+        {
+            Cursor.lockState = CursorLockMode.None;
+        }
+
+        _owningMouseCapture = false;
+        WindowsCursorClip.Release();
     }
 
     private void HideCursor()
