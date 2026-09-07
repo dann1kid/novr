@@ -4,6 +4,10 @@ NOVR is a reworked version of [UUVR](https://github.com/Raicuparta/uuvr) designe
 
 This tree is based on the [dann1kid/novr](https://github.com/dann1kid/novr) fork of [InfernoSuperNova/novr](https://github.com/InfernoSuperNova/novr), then patched for remaining VR gaps.
 
+## 0.4.19
+
+- **Green menu pointer:** the cursor is now a Unity UI child of the hangar menus (green cross, ring, and +), using the same Image/Text path as the buttons. 0.4.18's separate mesh/shader quad never appeared in the headset.
+
 ## 0.4.18
 
 - **Green menu ring:** the VR pointer is parented to the visible hangar menus (the same canvases you already see) and drawn as a large unlit quad in front of them. Mouse capture from 0.4.17 is unchanged.

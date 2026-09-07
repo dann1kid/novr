@@ -34,5 +34,6 @@ public class NOVRGameplayUIBehaviour : UIRenderedCanvasBehavior
         transform.localScale = PanelScale;
         transform.localPosition = new Vector3(0f, 0f, 3f);
         transform.localRotation = Quaternion.identity;
+        VrUiCursor.I?.BindMenuHost(transform);
     }
 }

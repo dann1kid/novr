@@ -4,7 +4,6 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
-using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 namespace NOVR.VrUi;
@@ -46,45 +45,55 @@ public class VrUiCursor: NOVRBehaviour
         }
     }
 
-    private Texture2D? _texture;
-    private const float MaxYawDegrees = 65f;
-    private const float MaxPitchDegrees = 45f;
-    private const float DefaultProjectionDistance = 2.7f;
-    private const float MinProjectionDistance = 1.0f;
-    private const float CursorWorldSize = 0.48f;
-    private const float MenuCanvasFrontOffset = -48f;
+    private const float OverlayCanvasScale = 0.003f;
+    private const float OverlayCanvasDistance = 900f;
+    private const float MenuCanvasFrontOffset = -24f;
     private const int CursorTextureSize = 64;
-    private const float CursorRingRadius = 20f;
-    private const float CursorRingThickness = 7f;
-    private const float CursorDotRadius = 4f;
-    private const float CursorIdlePulseScale = 0.035f;
+    private const float CursorRingRadius = 22f;
+    private const float CursorRingThickness = 8f;
+    private const float CursorDotRadius = 5f;
+    private const float CursorIdlePulseScale = 0.04f;
     private const float CursorIdlePulseSpeed = 5.5f;
     private const float CursorHoverScale = 1.18f;
     private const float CursorPressedScale = 0.84f;
-    private const float CursorClickPulseScale = 0.22f;
+    private const float CursorClickPulseScale = 0.18f;
     private const float CursorClickPulseDuration = 0.18f;
     private const float CursorAnimationLerpSpeed = 24f;
-    private static readonly Color CursorNormalColor = new Color32(80, 255, 90, 255);
-    private static readonly Color CursorHoverColor = new Color32(170, 255, 180, 255);
+    private static readonly Vector2 CrossBarSize = new Vector2(260f, 32f);
+    private static readonly Vector2 CrossStemSize = new Vector2(32f, 260f);
+    private static readonly Vector2 DotSize = new Vector2(28f, 28f);
+    private static readonly Vector2 RingSize = new Vector2(180f, 180f);
+    private static readonly Color CursorNormalColor = new Color32(40, 255, 70, 255);
+    private static readonly Color CursorHoverColor = new Color32(180, 255, 190, 255);
     private static readonly Color CursorPressedColor = new Color32(255, 224, 92, 255);
+
     private GameObject? _cursor;
-    private MeshRenderer? _cursorRenderer;
-    private Material? _cursorMaterial;
-    private RawImage? _cursorImage;
+    private RectTransform? _cursorRect;
+    private Canvas? _ownedCanvas;
+    private Image? _crossBar;
+    private Image? _crossStem;
+    private Image? _dot;
+    private Image? _ring;
+    private Text? _marker;
+    private readonly List<Image> _images = new();
+    private Sprite? _whiteSprite;
+    private Sprite? _ringSprite;
+    private Transform? _boundHost;
     private Transform? _menuHost;
     private bool _cursorOverInteractive;
     private float _lastCursorClickTime = -100f;
     private bool _hasProjectionReferenceOverride;
     private Quaternion _projectionReferenceRotation = Quaternion.identity;
+    private Color _displayColor = CursorNormalColor;
 
-    private bool _hasInitializedEventSystem = false;
+    private bool _hasInitializedEventSystem;
     private bool _owningMouseCapture;
     private Mouse? _virtualMouse;
     private Mouse? _realMouse;
-    
-    
+
     private int ScreenWidth => Screen.width;
     private int ScreenHeight => Screen.height;
+
     public Camera? UiCamera
     {
         get
@@ -101,25 +110,15 @@ public class VrUiCursor: NOVRBehaviour
             return APIBus.HeadsetCamera ?? Camera.main;
         }
     }
-    
-    
+
     public Vector2 GetScreenPoint()
     {
-        var camera = UiCamera;
-        if (_cursor != null && camera != null)
+        if (_realMouse != null)
         {
-            Vector3 viewportPoint = camera.WorldToViewportPoint(_cursor.transform.position, Camera.MonoOrStereoscopicEye.Mono);
-            var pixelRect = camera.pixelRect;
-            if (pixelRect.width <= 1f || pixelRect.height <= 1f)
-            {
-                pixelRect = new Rect(0f, 0f, Screen.width, Screen.height);
-            }
-
-            var screenX = pixelRect.x + Mathf.Clamp01(viewportPoint.x) * pixelRect.width;
-            var screenY = pixelRect.y + Mathf.Clamp01(viewportPoint.y) * pixelRect.height;
-            return new Vector2(screenX, screenY);
+            return ClampToScreen(_realMouse.position.ReadValue());
         }
-        return Vector2.zero;
+
+        return new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
     }
 
     public void SetProjectionReferenceRotation(Quaternion referenceRotation)
@@ -132,11 +131,15 @@ public class VrUiCursor: NOVRBehaviour
     {
         _hasProjectionReferenceOverride = false;
     }
-    
-    
-    private void Start()
+
+    public void BindMenuHost(Transform host)
     {
-        _texture = CreateCursorTexture();
+        if (host == null || host.position.y < -1000f)
+        {
+            return;
+        }
+
+        _boundHost = host;
     }
 
     private void Update()
@@ -163,7 +166,6 @@ public class VrUiCursor: NOVRBehaviour
 
     private void TickCursor()
     {
-        // The game locks the cursor in the cockpit. Do not steal it.
         if (Cursor.lockState == CursorLockMode.Locked && !_owningMouseCapture)
         {
             WindowsCursorClip.Release();
@@ -192,7 +194,6 @@ public class VrUiCursor: NOVRBehaviour
             _hasInitializedEventSystem = true;
         }
 
-        _texture ??= CreateCursorTexture();
         UpdateCursorAngles();
 
         var realMouse = _realMouse;
@@ -208,9 +209,6 @@ public class VrUiCursor: NOVRBehaviour
         if (realMouse.rightButton.isPressed) buttons |= 2;
         if (realMouse.middleButton.isPressed) buttons |= 4;
 
-        // Drive UI clicks from the hardware mouse in game-window pixels. The
-        // visible ring is a separate world quad; reprojecting it back to
-        // screen space missed buttons when overlay and hangar cameras differed.
         InputState.Change(_virtualMouse, new MouseState
         {
             position = ClampToScreen(realMouse.position.ReadValue()),
@@ -262,12 +260,11 @@ public class VrUiCursor: NOVRBehaviour
             Mathf.Clamp(mousePos.x, 0f, Mathf.Max(1, Screen.width)),
             Mathf.Clamp(mousePos.y, 0f, Mathf.Max(1, Screen.height)));
     }
-    
 
     private void UpdateCursorAngles()
     {
         EnsureCursorVisual();
-        if (_cursor == null)
+        if (_cursor == null || _cursorRect == null)
         {
             return;
         }
@@ -292,62 +289,68 @@ public class VrUiCursor: NOVRBehaviour
         }
 
         AttachToOverlay(camera);
-        PlaceInFrontOfCamera(camera);
-    }
-
-    private Quaternion GetProjectionReferenceRotation(Camera camera)
-    {
-        if (_hasProjectionReferenceOverride)
-        {
-            return _projectionReferenceRotation;
-        }
-
-        return camera.transform.rotation;
+        PlaceOnOverlayCanvas();
     }
 
     private void EnsureCursorVisual()
     {
         if (_cursor != null)
         {
-            if (_cursorRenderer != null)
-            {
-                _cursorRenderer.enabled = true;
-            }
             return;
         }
 
-        _texture ??= CreateCursorTexture();
-        _cursor = new GameObject("NOVR VrCursor");
-        var meshFilter = _cursor.AddComponent<MeshFilter>();
-        meshFilter.sharedMesh = CreateFacingQuadMesh();
-        _cursorRenderer = _cursor.AddComponent<MeshRenderer>();
-        _cursorMaterial = CreateCursorMaterial(_texture);
-        _cursorRenderer.sharedMaterial = _cursorMaterial;
-        _cursorRenderer.shadowCastingMode = ShadowCastingMode.Off;
-        _cursorRenderer.receiveShadows = false;
-        _cursorRenderer.lightProbeUsage = LightProbeUsage.Off;
-        _cursorRenderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
-        _cursorRenderer.sortingOrder = short.MaxValue;
+        _whiteSprite ??= CreateWhiteSprite();
+        _ringSprite ??= CreateRingSprite();
 
-        var imageObject = new GameObject("NOVR VrCursorImage");
-        imageObject.transform.SetParent(_cursor.transform, false);
-        var imageRect = imageObject.AddComponent<RectTransform>();
-        imageRect.sizeDelta = Vector2.one;
-        imageRect.localPosition = Vector3.zero;
-        imageRect.localRotation = Quaternion.identity;
-        imageRect.localScale = Vector3.one;
-        var imageCanvas = imageObject.AddComponent<Canvas>();
-        imageCanvas.renderMode = RenderMode.WorldSpace;
-        imageCanvas.overrideSorting = true;
-        imageCanvas.sortingOrder = short.MaxValue;
-        imageCanvas.pixelPerfect = false;
-        _cursorImage = imageObject.AddComponent<RawImage>();
-        _cursorImage.raycastTarget = false;
-        _cursorImage.texture = _texture;
-        _cursorImage.color = CursorNormalColor;
+        _cursor = new GameObject("NOVR VrCursor");
+        _cursorRect = _cursor.AddComponent<RectTransform>();
+        _cursorRect.sizeDelta = Vector2.zero;
+        _cursorRect.anchorMin = new Vector2(0.5f, 0.5f);
+        _cursorRect.anchorMax = new Vector2(0.5f, 0.5f);
+        _cursorRect.pivot = new Vector2(0.5f, 0.5f);
+
+        _crossBar = CreateSolidImage("CrossBar", _cursorRect, CrossBarSize);
+        _crossStem = CreateSolidImage("CrossStem", _cursorRect, CrossStemSize);
+        _dot = CreateSolidImage("Dot", _cursorRect, DotSize);
+        _ring = CreateSolidImage("Ring", _cursorRect, RingSize);
+        _ring.sprite = _ringSprite;
+        _ring.type = Image.Type.Simple;
+        _ring.preserveAspect = true;
+
+        var markerObject = new GameObject("Marker");
+        markerObject.transform.SetParent(_cursorRect, false);
+        var markerRect = markerObject.AddComponent<RectTransform>();
+        markerRect.sizeDelta = new Vector2(220f, 220f);
+        _marker = markerObject.AddComponent<Text>();
+        _marker.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        _marker.fontSize = 140;
+        _marker.alignment = TextAnchor.MiddleCenter;
+        _marker.color = CursorNormalColor;
+        _marker.raycastTarget = false;
+        _marker.text = "+";
+        _marker.horizontalOverflow = HorizontalWrapMode.Overflow;
+        _marker.verticalOverflow = VerticalWrapMode.Overflow;
 
         LayerHelper.SetLayerRecursive(_cursor.transform, LayerHelper.GetVrUiLayer());
-        Debug.Log("[NOVR] VR cursor quad created on the VrUi layer.");
+        Debug.Log("[NOVR] VR cursor created as Unity UI graphics on the menu canvas.");
+    }
+
+    private Image CreateSolidImage(string name, RectTransform parent, Vector2 size)
+    {
+        var gameObject = new GameObject(name);
+        gameObject.transform.SetParent(parent, false);
+        var rect = gameObject.AddComponent<RectTransform>();
+        rect.sizeDelta = size;
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        var image = gameObject.AddComponent<Image>();
+        image.sprite = _whiteSprite;
+        image.color = CursorNormalColor;
+        image.raycastTarget = false;
+        image.type = Image.Type.Simple;
+        _images.Add(image);
+        return image;
     }
 
     private void DestroyCursorVisual()
@@ -358,17 +361,28 @@ public class VrUiCursor: NOVRBehaviour
             _cursor = null;
         }
 
-        _cursorRenderer = null;
-        _cursorMaterial = null;
-        _cursorImage = null;
+        _cursorRect = null;
+        _ownedCanvas = null;
+        _crossBar = null;
+        _crossStem = null;
+        _dot = null;
+        _ring = null;
+        _marker = null;
+        _images.Clear();
         _menuHost = null;
     }
 
     private void AttachToMenu(Transform host)
     {
-        if (_cursor == null)
+        if (_cursor == null || _cursorRect == null)
         {
             return;
+        }
+
+        if (_ownedCanvas != null)
+        {
+            Destroy(_ownedCanvas);
+            _ownedCanvas = null;
         }
 
         if (_cursor.transform.parent != host)
@@ -376,13 +390,16 @@ public class VrUiCursor: NOVRBehaviour
             _cursor.transform.SetParent(host, false);
             _menuHost = host;
             LayerHelper.SetLayerRecursive(_cursor.transform, LayerHelper.GetVrUiLayer());
-            Debug.Log($"[NOVR] VR cursor attached to menu canvas '{host.name}'.");
+            Debug.Log($"[NOVR] VR cursor attached to menu '{host.name}' as a UI child.");
         }
+
+        _cursorRect.localScale = Vector3.one;
+        _cursorRect.SetAsLastSibling();
     }
 
     private void AttachToOverlay(Camera overlay)
     {
-        if (_cursor == null)
+        if (_cursor == null || _cursorRect == null)
         {
             return;
         }
@@ -394,232 +411,138 @@ public class VrUiCursor: NOVRBehaviour
             LayerHelper.SetLayerRecursive(_cursor.transform, LayerHelper.GetVrUiLayer());
             Debug.Log("[NOVR] VR cursor attached to the VR UI overlay camera.");
         }
+
+        if (_ownedCanvas == null)
+        {
+            _ownedCanvas = _cursor.AddComponent<Canvas>();
+            _ownedCanvas.renderMode = RenderMode.WorldSpace;
+            _ownedCanvas.overrideSorting = true;
+            _ownedCanvas.sortingOrder = short.MaxValue;
+            _ownedCanvas.pixelPerfect = false;
+        }
+
+        _ownedCanvas.worldCamera = overlay;
+        _cursorRect.localScale = new Vector3(OverlayCanvasScale, OverlayCanvasScale, OverlayCanvasScale);
+        _cursorRect.localRotation = Quaternion.identity;
     }
 
     private void PlaceOnMenu(Transform host)
     {
-        if (_cursor == null)
+        if (_cursorRect == null)
         {
             return;
         }
 
-        var mousePos = _realMouse != null
-            ? ClampToScreen(_realMouse.position.ReadValue())
-            : new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+        var mousePos = GetScreenPoint();
         var nx = ScreenWidth > 0 ? Mathf.Clamp01(mousePos.x / ScreenWidth) : 0.5f;
         var ny = ScreenHeight > 0 ? Mathf.Clamp01(mousePos.y / ScreenHeight) : 0.5f;
 
-        var rectTransform = host as RectTransform ?? host.GetComponent<RectTransform>();
-        Vector3 localPos;
-        if (rectTransform != null)
+        var hostRect = host as RectTransform ?? host.GetComponent<RectTransform>();
+        Vector2 anchored;
+        if (hostRect != null)
         {
-            var rect = rectTransform.rect;
-            localPos = new Vector3(
+            var rect = hostRect.rect;
+            anchored = new Vector2(
                 Mathf.Lerp(rect.xMin, rect.xMax, nx),
-                Mathf.Lerp(rect.yMin, rect.yMax, ny),
-                MenuCanvasFrontOffset);
+                Mathf.Lerp(rect.yMin, rect.yMax, ny));
         }
         else
         {
-            localPos = new Vector3((nx - 0.5f) * 400f, (ny - 0.5f) * 225f, MenuCanvasFrontOffset);
+            anchored = new Vector2((nx - 0.5f) * 1920f, (ny - 0.5f) * 1080f);
         }
 
-        _cursor.transform.localPosition = localPos;
-        _cursor.transform.localRotation = Quaternion.identity;
-
-        var parentScale = Mathf.Max(Mathf.Abs(host.lossyScale.x), 0.0001f);
-        var target = CursorWorldSize / parentScale;
-        _cursor.transform.localScale = Vector3.one * target;
-
+        _cursorRect.anchorMin = new Vector2(0.5f, 0.5f);
+        _cursorRect.anchorMax = new Vector2(0.5f, 0.5f);
+        _cursorRect.pivot = new Vector2(0.5f, 0.5f);
+        _cursorRect.anchoredPosition = anchored;
+        _cursorRect.localRotation = Quaternion.identity;
+        _cursorRect.localScale = Vector3.one;
+        var local = _cursorRect.localPosition;
+        _cursorRect.localPosition = new Vector3(local.x, local.y, MenuCanvasFrontOffset);
+        _cursorRect.SetAsLastSibling();
         UpdateHoverFromScreen(mousePos);
     }
 
-    private void PlaceInFrontOfCamera(Camera camera)
+    private void PlaceOnOverlayCanvas()
     {
-        if (_cursor == null)
+        if (_cursorRect == null)
         {
             return;
         }
 
-        Vector3 localEuler;
-        var mouse = _realMouse;
-        if (mouse == null)
-        {
-            localEuler = Vector3.forward;
-        }
-        else
-        {
-            var mousePos = ClampToScreen(mouse.position.ReadValue());
-            localEuler = Quaternion.Euler(-ProjectPitchAngle(mousePos.y), ProjectYawAngle(mousePos.x), 0f) * Vector3.forward;
-            UpdateHoverFromScreen(mousePos);
-        }
-
-        var worldDirection = GetProjectionReferenceRotation(camera) * localEuler;
-        var localDirection = Quaternion.Inverse(camera.transform.rotation) * worldDirection;
-        if (localDirection.sqrMagnitude < 0.0001f)
-        {
-            localDirection = Vector3.forward;
-        }
-
-        _cursor.transform.localPosition = localDirection.normalized * DefaultProjectionDistance;
-        _cursor.transform.localRotation = Quaternion.LookRotation(localDirection, Vector3.up);
-        _cursor.transform.localScale = Vector3.one * CursorWorldSize;
+        var mousePos = GetScreenPoint();
+        var nx = ScreenWidth > 0 ? Mathf.Clamp01(mousePos.x / ScreenWidth) : 0.5f;
+        var ny = ScreenHeight > 0 ? Mathf.Clamp01(mousePos.y / ScreenHeight) : 0.5f;
+        _cursorRect.localPosition = new Vector3((nx - 0.5f) * 1920f, (ny - 0.5f) * 1080f, OverlayCanvasDistance);
+        _cursorRect.localRotation = Quaternion.identity;
+        _cursorRect.localScale = new Vector3(OverlayCanvasScale, OverlayCanvasScale, OverlayCanvasScale);
+        UpdateHoverFromScreen(mousePos);
+        _ = _hasProjectionReferenceOverride;
+        _ = _projectionReferenceRotation;
     }
 
     private void UpdateHoverFromScreen(Vector2 screenPos)
     {
         _cursorOverInteractive = false;
-        if (TryGetUiDistanceUnderCursor(screenPos, out _, out var overInteractive))
-        {
-            _cursorOverInteractive = overInteractive;
-        }
-    }
-
-    private static Transform? FindActiveMenuCanvas()
-    {
-        Transform? mainCanvas = null;
-        Transform? menuCanvas = null;
-        var canvases = Resources.FindObjectsOfTypeAll<Canvas>();
-        for (var i = 0; i < canvases.Length; i++)
-        {
-            var canvas = canvases[i];
-            if (canvas == null || !canvas.enabled || canvas.renderMode != RenderMode.WorldSpace)
-            {
-                continue;
-            }
-
-            var gameObject = canvas.gameObject;
-            if (gameObject == null || !gameObject.activeInHierarchy || !gameObject.scene.IsValid() || !gameObject.scene.isLoaded)
-            {
-                continue;
-            }
-
-            if (gameObject.transform.position.y < -1000f)
-            {
-                continue;
-            }
-
-            if (gameObject.name == "MainCanvas")
-            {
-                mainCanvas = gameObject.transform;
-            }
-            else if (gameObject.name == "MenuCanvas")
-            {
-                menuCanvas = gameObject.transform;
-            }
-        }
-
-        return mainCanvas != null ? mainCanvas : menuCanvas;
-    }
-
-    private static Mesh CreateFacingQuadMesh()
-    {
-        var mesh = new Mesh { name = "NOVR VrCursorQuad" };
-        mesh.vertices = new[]
-        {
-            new Vector3(-0.5f, -0.5f, 0f),
-            new Vector3(0.5f, -0.5f, 0f),
-            new Vector3(0.5f, 0.5f, 0f),
-            new Vector3(-0.5f, 0.5f, 0f)
-        };
-        mesh.uv = new[]
-        {
-            new Vector2(0f, 0f),
-            new Vector2(1f, 0f),
-            new Vector2(1f, 1f),
-            new Vector2(0f, 1f)
-        };
-        mesh.normals = new[]
-        {
-            Vector3.back, Vector3.back, Vector3.back, Vector3.back
-        };
-        mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
-        mesh.RecalculateBounds();
-        return mesh;
-    }
-
-    private static Material CreateCursorMaterial(Texture2D texture)
-    {
-        var shader = Shader.Find("Sprites/Default") ??
-                     Shader.Find("UI/Default") ??
-                     Shader.Find("Unlit/Transparent") ??
-                     Shader.Find("Universal Render Pipeline/Unlit") ??
-                     Shader.Find("Standard");
-        var material = shader != null ? new Material(shader) : new Material(Shader.Find("Sprites/Default"));
-        material.mainTexture = texture;
-        material.color = CursorNormalColor;
-        material.SetColor("_Color", CursorNormalColor);
-        material.SetColor("_BaseColor", CursorNormalColor);
-        material.SetTexture("_MainTex", texture);
-        material.SetTexture("_BaseMap", texture);
-        material.SetFloat("_Surface", 1f);
-        material.SetInt("_ZWrite", 0);
-        material.SetInt("_ZTest", (int)CompareFunction.Always);
-        material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
-        material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
-        material.renderQueue = 4000;
-        material.enableInstancing = false;
-        return material;
-    }
-
-
-    private bool TryGetUiDistanceUnderCursor(Vector2 screenPos, out float distance, out bool overInteractive)
-    {
-        distance = default;
-        overInteractive = false;
-
         if (EventSystem.current == null)
         {
-            return false;
+            return;
         }
 
         var pointerEventData = new PointerEventData(EventSystem.current)
         {
             position = screenPos
         };
-
         var results = new List<RaycastResult>();
         EventSystem.current.RaycastAll(pointerEventData, results);
-
-        var camera = UiCamera;
-        Vector3 cameraPos = camera != null ? camera.transform.position : Vector3.zero;
-        RaycastResult? bestInteractive = null;
-        RaycastResult? bestAny = null;
-
         foreach (var result in results)
         {
             if (result.gameObject == _cursor ||
-                result.distance < 0f ||
                 result.gameObject.GetComponentInParent<NOVRBlackoutCanvasBehavior>() != null ||
                 result.gameObject.GetComponentInParent<global::MapIcon>() != null)
             {
                 continue;
             }
 
-            if (bestAny == null)
+            if (IsInteractiveRaycastTarget(result.gameObject))
             {
-                bestAny = result;
-            }
-
-            if (bestInteractive == null && IsInteractiveRaycastTarget(result.gameObject))
-            {
-                bestInteractive = result;
+                _cursorOverInteractive = true;
+                return;
             }
         }
+    }
 
-        var chosen = bestInteractive ?? bestAny;
-        if (chosen == null)
+    private Transform? FindActiveMenuCanvas()
+    {
+        var main = FindObjectOfType<NOVRMainMenuBehavior>();
+        if (IsUsableHost(main != null ? main.transform : null))
+        {
+            return main!.transform;
+        }
+
+        if (IsUsableHost(_boundHost))
+        {
+            return _boundHost;
+        }
+
+        var gameplay = FindObjectOfType<NOVRGameplayUIBehaviour>();
+        if (IsUsableHost(gameplay != null ? gameplay.transform : null))
+        {
+            return gameplay!.transform;
+        }
+
+        return null;
+    }
+
+    private static bool IsUsableHost(Transform? host)
+    {
+        if (host == null || !host.gameObject.activeInHierarchy || host.position.y < -1000f)
         {
             return false;
         }
 
-        overInteractive = IsInteractiveRaycastTarget(chosen.Value.gameObject);
-        distance = chosen.Value.worldPosition == Vector3.zero
-            ? chosen.Value.distance
-            : Vector3.Distance(cameraPos, chosen.Value.worldPosition);
-        distance = Mathf.Max(distance, MinProjectionDistance);
-
-        return distance > 0f;
+        var canvas = host.GetComponent<Canvas>();
+        return canvas == null || canvas.enabled;
     }
 
     private static bool IsInteractiveRaycastTarget(GameObject gameObject)
@@ -638,7 +561,10 @@ public class VrUiCursor: NOVRBehaviour
 
     private void UpdateCursorAnimation(Mouse realMouse)
     {
-        if (_cursor == null || _cursorMaterial == null) return;
+        if (_cursorRect == null)
+        {
+            return;
+        }
 
         if (realMouse.leftButton.wasPressedThisFrame)
         {
@@ -662,7 +588,9 @@ public class VrUiCursor: NOVRBehaviour
             targetVisualScale *= CursorPressedScale;
         }
 
-        ApplyAnimatedScale(targetVisualScale);
+        var layout = _menuHost != null ? Vector3.one : new Vector3(OverlayCanvasScale, OverlayCanvasScale, OverlayCanvasScale);
+        var target = layout * targetVisualScale;
+        _cursorRect.localScale = Vector3.Lerp(_cursorRect.localScale, target, Time.unscaledDeltaTime * CursorAnimationLerpSpeed);
 
         var targetColor = CursorNormalColor;
         if (_cursorOverInteractive)
@@ -674,62 +602,32 @@ public class VrUiCursor: NOVRBehaviour
             targetColor = CursorPressedColor;
         }
 
-        var color = Color.Lerp(_cursorMaterial.color, targetColor, Time.unscaledDeltaTime * CursorAnimationLerpSpeed);
-        _cursorMaterial.color = color;
-        _cursorMaterial.SetColor("_Color", color);
-        _cursorMaterial.SetColor("_BaseColor", color);
-        if (_cursorImage != null)
+        _displayColor = Color.Lerp(_displayColor, targetColor, Time.unscaledDeltaTime * CursorAnimationLerpSpeed);
+        for (var i = 0; i < _images.Count; i++)
         {
-            _cursorImage.color = color;
+            if (_images[i] != null)
+            {
+                _images[i].color = _displayColor;
+            }
+        }
+
+        if (_marker != null)
+        {
+            _marker.color = _displayColor;
         }
     }
 
-    private void ApplyAnimatedScale(float visualScale)
+    private static Sprite CreateWhiteSprite()
     {
-        if (_cursor == null)
-        {
-            return;
-        }
-
-        float layout;
-        if (_menuHost != null)
-        {
-            var parentScale = Mathf.Max(Mathf.Abs(_menuHost.lossyScale.x), 0.0001f);
-            layout = CursorWorldSize / parentScale;
-        }
-        else
-        {
-            layout = CursorWorldSize;
-        }
-
-        var target = Vector3.one * (layout * visualScale);
-        _cursor.transform.localScale = Vector3.Lerp(
-            _cursor.transform.localScale,
-            target,
-            Time.unscaledDeltaTime * CursorAnimationLerpSpeed);
+        var texture = Texture2D.whiteTexture;
+        return Sprite.Create(
+            texture,
+            new Rect(0f, 0f, texture.width, texture.height),
+            new Vector2(0.5f, 0.5f),
+            100f);
     }
 
-
-    private float ProjectPitchAngle(float y)
-    {
-        int height = ScreenHeight;
-        if (height <= 0)
-        {
-            return 0f;
-        }
-        return Mathf.Lerp(-MaxPitchDegrees, MaxPitchDegrees, Mathf.Clamp01(y / height));
-    }
-    private float ProjectYawAngle(float x)
-    {
-        int width = ScreenWidth;
-        if (width <= 0)
-        {
-            return 0f;
-        }
-        return Mathf.Lerp(-MaxYawDegrees, MaxYawDegrees, Mathf.Clamp01(x / width));
-    }
-
-    private static Texture2D CreateCursorTexture()
+    private static Sprite CreateRingSprite()
     {
         var texture = new Texture2D(CursorTextureSize, CursorTextureSize, TextureFormat.RGBA32, false)
         {
@@ -756,14 +654,17 @@ public class VrUiCursor: NOVRBehaviour
 
         texture.SetPixels32(colors);
         texture.Apply();
-        return texture;
+        return Sprite.Create(texture, new Rect(0f, 0f, CursorTextureSize, CursorTextureSize), new Vector2(0.5f, 0.5f), 100f);
     }
-    
+
     private void LogRaycastAtCursor()
     {
-        if (EventSystem.current == null) return;
-        
-        var screenPos = _realMouse != null ? ClampToScreen(_realMouse.position.ReadValue()) : GetScreenPoint();
+        if (EventSystem.current == null)
+        {
+            return;
+        }
+
+        var screenPos = GetScreenPoint();
         var pointerEventData = new PointerEventData(EventSystem.current)
         {
             position = screenPos
@@ -771,26 +672,23 @@ public class VrUiCursor: NOVRBehaviour
 
         var results = new List<RaycastResult>();
         EventSystem.current.RaycastAll(pointerEventData, results);
-        
+
         Debug.Log($"[VrUiCursor] Click Raycast at screenPos={screenPos}: found {results.Count} results");
         for (int i = 0; i < results.Count; i++)
         {
             var result = results[i];
-            if (result.gameObject == _cursor) continue;
-            
+            if (result.gameObject == _cursor)
+            {
+                continue;
+            }
+
             var canvas = result.gameObject.GetComponentInParent<Canvas>();
             var cg = result.gameObject.GetComponentInParent<CanvasGroup>();
             string cgInfo = cg != null ? $", CanvasGroup(alpha={cg.alpha}, interactable={cg.interactable}, blocksRaycasts={cg.blocksRaycasts})" : "";
-            string rectInfo = "";
-            var rt = result.gameObject.GetComponent<RectTransform>();
-            if (rt != null)
-            {
-                rectInfo = $", localPos={rt.localPosition}, size={rt.sizeDelta}";
-            }
-            Debug.Log($"[VrUiCursor]   Hit[{i}]: name='{result.gameObject.name}', path='{GetGameObjectPath(result.gameObject)}', canvas='{(canvas != null ? canvas.name : "None")}'{rectInfo}{cgInfo}");
+            Debug.Log($"[VrUiCursor]   Hit[{i}]: name='{result.gameObject.name}', path='{GetGameObjectPath(result.gameObject)}', canvas='{(canvas != null ? canvas.name : "None")}'{cgInfo}");
         }
     }
-    
+
     private static string GetGameObjectPath(GameObject go)
     {
         string path = go.name;
@@ -807,7 +705,10 @@ public class VrUiCursor: NOVRBehaviour
     {
         try
         {
-            if (_virtualMouse == null) return false;
+            if (_virtualMouse == null)
+            {
+                return false;
+            }
             var uiModule = FindObjectOfType<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
             if (uiModule != null)
             {
@@ -819,11 +720,9 @@ public class VrUiCursor: NOVRBehaviour
                 RestrictActionToVirtualMouse(uiModule.scrollWheel?.action, _virtualMouse.path);
                 return true;
             }
-            else
-            {
-                Debug.LogWarning("[NOVR] InputSystemUIInputModule not found in scene yet, retrying next frame...");
-                return false;
-            }
+
+            Debug.LogWarning("[NOVR] InputSystemUIInputModule not found in scene yet, retrying next frame...");
+            return false;
         }
         catch (System.Exception ex)
         {
@@ -834,7 +733,10 @@ public class VrUiCursor: NOVRBehaviour
 
     private static void RestrictActionToVirtualMouse(InputAction? action, string devicePath)
     {
-        if (action == null) return;
+        if (action == null)
+        {
+            return;
+        }
         for (int i = 0; i < action.bindings.Count; i++)
         {
             var binding = action.bindings[i];
