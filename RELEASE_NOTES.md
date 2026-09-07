@@ -1,11 +1,11 @@
-# NOVR 0.4.17
+# NOVR 0.4.18
 
-Close the game, then extract `NOVR-0.4.17.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.17`.
+Close the game, then extract `NOVR-0.4.18.zip` into `Nuclear Option/BepInEx`. `BepInEx/plugins/NOVR/version.txt` should read `0.4.18`.
 
-## Mouse stays in the game window
+## Green ring on the menus
 
-While the game is focused, NOVR confines the OS mouse to the Nuclear Option window (Unity Confined plus Win32 ClipCursor). It should no longer slide onto other monitors and steal focus. Alt-tab still releases the mouse.
+0.4.17 captured the mouse but the green ring was projected from the hangar camera, so the VR overlay never drew it. The pointer is now attached to `MainCanvas` / `MenuCanvas` — the same world-space menus you already see — and sits a few centimeters in front of them as a large green ring.
 
-The green VR ring from 0.4.16 is unchanged. Native full-canvas menu stays off.
+Mouse capture is unchanged: while the game window is focused, the OS cursor stays in that window. Alt-tab releases it. Click the game window on the monitor before putting the headset on.
 
-Stereoscopic Zoom View is still temporarily off. HUD layout from 0.4.6 is unchanged.
+Native full-canvas menu stays off. Stereoscopic Zoom View is still temporarily off. HUD layout from 0.4.6 is unchanged.

@@ -20,7 +20,7 @@ public class NOVRMainMenuBehavior : UIRenderedCanvasBehavior
         if (canvas != null)
         {
             canvas.enabled = true;
-            var eventCamera = APIBus.HeadsetCamera ?? APIBus.CockpitHudCamera;
+            var eventCamera = APIBus.CockpitHudCamera ?? APIBus.HeadsetCamera;
             if (eventCamera != null)
             {
                 canvas.worldCamera = eventCamera;
